@@ -228,6 +228,7 @@ namespace TRL
     saturated_water_pressure(-0.405),
     wilting_water_pressure(-150.)
   {
+	  std::cout << "Program run with the following arguments:\n";
 	  for (int i=0; i<argc; i++)
 	  {
 		  std::cout << "arg " << i << " : " << argv[i] << "\n";
