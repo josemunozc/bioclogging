@@ -1,61 +1,24 @@
-# Listing of Parameters
-# ---------------------
-
-# The input grid 
-# set mesh = slide.inp
-
-# --------------------------------------------------
-# Time stepping control
 subsection time stepping
-  set timestep number max = 100 # maximum number of timesteps to execute
-  set time step  = 3600  # simulation time step
-  set theta scheme value = 0.5
+  set timestep number max = 86400
+  set time step           = 1
+  set theta scheme value  = 1
 end
-
-# --------------------------------------------------
-# Geometric data
-# We are assuming a 1D domain with an insulation layer 
-# placed at some depth.
-#
-# domain depth        : x0 (0m)______________________________________________ xL (20m)
-# insulation depth    :        <- 1m ->|    |
-# insulation thickness:              ->|0.2m|<- 
-#
-# currently only homogeneous refinement is implemented 
-# number of cells is calculated as 2^n where n='refinement level'
 
 subsection geometric data
-  set domain size = 20. # (m)
-  set insulation thickness = 0.2 # (m)
-  set insulation depth = 1. # (m)
-  set refinement level = 5
+  set use mesh file        = false
+  set mesh filename        = soleimani_mesh_fig_3.msh
+  set domain size          = 100.  # (cm)
+  set refinement level     = 10
 end
 
-# --------------------------------------------------
-# Material data
-# currently only two materials implemented
-subsection material data
-  set soil thermal conductivity = 1.2 # (W/mK)
-  set soil density = 1960. # kg/m3
-  set soil specific heat capacity = 840. # J/kgK
-  set insulation thermal conductivity = 0.034 # (W/mK)
-  set insulation density = 30. # kg/m3
-  set insulation specific heat capacity = 1130. # J/kgK
+subsection equations
+	set moisture transport     = mixed
+	set hydraulic properties   = van_genuchten_1980
+	set lumped matrix (qtrapez)= true
 end
 
-# --------------------------------------------------
-# Boundary conditions
 subsection boundary conditions
-  set fixed at bottom = false #
-  set bottom fixed value = 10. # 
-  set fixed at top = true # currently only 'true' implemented
-  set top fixed value file = "surface_temperature.txt"
+	set initial condition  = -1000
+	set bottom fixed value = -1000
+	set top fixed value    = -75
 end
-
-# --------------------------------------------------
-# Output frequency and kind
-#subsection output
-#  set step           = 0.01
-#  set schlieren plot = true
-#end
-
