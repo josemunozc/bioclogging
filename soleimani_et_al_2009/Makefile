@@ -14,8 +14,7 @@ target = soleimani_et_al_2009
 # run-time checking of parameters and internal states is performed, so
 # you should set this value to `on' while you develop your program,
 # and to `off' when running production computations.
-debug-mode = on
-
+debug-mode = off
 
 # As third field, we need to give the path to the top-level deal.II
 # directory. You need to adjust this to your needs. Since this path is
@@ -54,8 +53,14 @@ libs.o   := $(lib-deal2.o)
 
 
 MYDIR=/home/zerpiko/libraries
-MYLIBS=$(MYDIR)/SurfaceCoefficients.cpp $(MYDIR)/AnalyticSolution.cpp $(MYDIR)/MaterialData.cpp\
- $(MYDIR)/BoundaryConditions.cpp
+MYSOURCES=\
+ $(MYDIR)/SurfaceCoefficients.cpp\
+ $(MYDIR)/AnalyticSolution.cpp\
+ $(MYDIR)/MaterialData.cpp\
+ $(MYDIR)/BoundaryConditions.cpp \
+ $(MYDIR)/parameters.cpp
+
+
 
 # We now use the variable defined above to switch between debug and
 # optimized mode to select the set of libraries to link with. Included
@@ -64,11 +69,24 @@ MYLIBS=$(MYDIR)/SurfaceCoefficients.cpp $(MYDIR)/AnalyticSolution.cpp $(MYDIR)/M
 # the extension .g.o for object files compiled in debug mode and .o for
 # object files in optimized mode (or whatever local default on your
 # system is instead of .o)
-MYOBJ=$(MYDIR)/SurfaceCoefficients.o $(MYDIR)/AnalyticSolution.o $(MYDIR)/MaterialData.o $(MYDIR)/BoundaryConditions.o
-ifeq ($(debug-mode),on)
-  libraries = $(target).g.$(OBJEXT) $(libs.g) $(MYOBJ)
+MYOBJ_OPT=\
+ $(MYDIR)/SurfaceCoefficients.o\
+ $(MYDIR)/AnalyticSolution.o\
+ $(MYDIR)/MaterialData.o\
+ $(MYDIR)/BoundaryConditions.o
+ #\
+ #$(MYDIR)/Parameters.o
+MYOBJ_DEB=\
+ $(MYDIR)/SurfaceCoefficients.g.o\
+ $(MYDIR)/AnalyticSolution.g.o\
+ $(MYDIR)/MaterialData.g.o\
+ $(MYDIR)/BoundaryConditions.g.o
+ #\
+ #$(MYDIR)/Parameters.g.o
+ ifeq ($(debug-mode),on)
+  libraries = $(target).g.$(OBJEXT) $(libs.g) $(MYOBJ_DEB)
 else
-  libraries = $(target).$(OBJEXT) $(libs.o) $(MYOBJ)
+  libraries = $(target).$(OBJEXT) $(libs.o) $(MYOBJ_OPT)
 endif
 
 # Now comes the first production rule: how to link the single object
@@ -76,7 +94,7 @@ endif
 # this is the first rule in the Makefile, it is the one `make' selects
 # if you call it without arguments.
 $(target)$(EXEEXT) : $(libraries)
-	@echo ============================ Linking $@
+	echo ============================ Linking $@
 	@$(CXX) -o $@ $^ $(LIBS) -Wall $(LDFLAGS)
 
 
@@ -107,10 +125,15 @@ clean:
 # and write the string indicating what we do instead.
 ./%.g.$(OBJEXT) :
 	@echo "==============debug========= $(<F)  ->  $@" $@
-	@$(CXX) $(CXXFLAGS.g) -c $< -o $@
+	@$(CXX) $(CXXFLAGS.g) -O0 -c $< -o $@
 ./%.$(OBJEXT) :
 	@echo "==============optimized===== $(<F)  ->  $@"
-	@$(CXX) $(CXXFLAGS.o) -Wall -c $< -o $@
+	@$(CXX) $(CXXFLAGS.o) -Wall -DHOST=`whoami` -c $< -o $@
+
+
+#$(MYDIR)/%.g.$(OBJEXT) :
+#	@echo "==============debug========= $(<F)  ->  $@" $@
+#	@$(CXX) $(CXXFLAGS.g) -O0 -c $< -o $@
 
 
 $(MYDIR)/SurfaceCoefficients.o: $(MYDIR)/SurfaceCoefficients.cpp
@@ -128,6 +151,30 @@ $(MYDIR)/MaterialData.o: $(MYDIR)/MaterialData.cpp
 $(MYDIR)/BoundaryConditions.o: $(MYDIR)/BoundaryConditions.cpp
 	@echo ================= building BoundaryConditions.o $<
 	@$(CXX) -Wall -c -o $(MYDIR)/BoundaryConditions.o $(MYDIR)/BoundaryConditions.cpp
+
+
+
+#$(MYDIR)/SurfaceCoefficients.g.o: $(MYDIR)/SurfaceCoefficients.cpp
+#	@echo ================= building SurfaceCoefficients.g.o $<
+#	@$(CXX) -Wall -c -o $(MYDIR)/SurfaceCoefficients.g.o $(MYDIR)/SurfaceCoefficients.cpp
+#
+#$(MYDIR)/AnalyticSolution.g.o: $(MYDIR)/AnalyticSolution.cpp
+#	@echo ================= building AnalyticSolution.g.o $<
+#	@$(CXX) -Wall -c -o $(MYDIR)/AnalyticSolution.g.o $(MYDIR)/AnalyticSolution.cpp
+#
+#$(MYDIR)/MaterialData.g.o: $(MYDIR)/MaterialData.cpp
+#	@echo ================= building MaterialData.g.o $<
+#	@$(CXX) -Wall -c -o $(MYDIR)/MaterialData.g.o $(MYDIR)/MaterialData.cpp
+#
+#$(MYDIR)/BoundaryConditions.g.o: $(MYDIR)/BoundaryConditions.cpp
+#	@echo ================= building BoundaryConditions.g.o $<
+#	@$(CXX) -Wall -c -o $(MYDIR)/BoundaryConditions.g.o $(MYDIR)/BoundaryConditions.cpp
+
+
+
+#$(MYDIR)/Parameters.g.o: $(MYDIR)/Parameters.cpp
+#	@echo ================= building Parameters.g.o $<
+#	@$(CXX) -Wall -c -o $(MYDIR)/Parameters.g.o $(MYDIR)/Parameters.cpp
 
 # The following statement tells make that the rules `run' and `clean'
 # are not expected to produce files of the same name as Makefile rules

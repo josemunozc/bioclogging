@@ -1,24 +1,75 @@
 subsection time stepping
-  set timestep number max = 86400
+  set timestep number max = 1 #5000000
   set time step           = 1
-  set theta scheme value  = 1
+  set richards theta scheme value  = 1
+  set transport theta scheme value = 0.5
 end
 
 subsection geometric data
   set use mesh file        = false
   set mesh filename        = soleimani_mesh_fig_3.msh
   set domain size          = 100.  # (cm)
-  set refinement level     = 10
+  set refinement level     = 7
 end
 
 subsection equations
 	set moisture transport     = mixed
 	set hydraulic properties   = van_genuchten_1980
 	set lumped matrix (qtrapez)= true
+	set homogeneous decay rate = false
+end
+
+subsection initial conditions
+	set initial condition homogeneous flow      = -9.9   # cm
+	set initial condition homogeneous transport =  0.0   # mg_substrate/L_free_water
+	set initial condition homogeneous bacteria  =  1.5E3 # mg_biomass/L_total_water
+	set initial condition using files           = false
+	set file with initial condition flow        = final_state_flow.ph 
+	set file with initial condition transport   = final_state_transport.ph
+	set file with initial condition bacteria    = final_state_bacteria.ph
 end
 
 subsection boundary conditions
-	set initial condition  = -1000
-	set bottom fixed value = -1000
-	set top fixed value    = -75
+	set richards fixed at bottom    = true
+	set richards bottom fixed value = -9.9          # (cm)
+	set richards bottom flow value  =  0.0002305555 # (cm/s) !!!!!!!!!!
+	
+	set richards fixed at top       = false
+	set richards top fixed value    = -9.9          # (cm)
+	set richards top flow value     =  0.0002305555 # (cm/s) 20cm/day
+	
+	set transport fixed at top    = false
+	set transport top fixed value = 2000 # (mg_substrate/L)
 end
+
+subsection van genuchten parameters
+	set van genuchten n     = 1.3
+	set van genuchten alpha = 0.18
+end
+
+subsection hydraulic properties
+	set saturated hydraulic conductivity = 0.079
+	set moisture content saturation      = 0.8
+	set moisture content residual        = 0.08736
+	set porosity                         = 0.8
+	set dispersivity longitudinal        = 1
+	set dispersivity transverse          = 0
+	set effective diffusion coefficient  = 0.00001 #cm2/s
+end
+
+subsection reaction properties
+	set first order decay factor   =  -8.0208333E-5 #1/s
+	set yield coefficient          =   0.5        #mg_biomass/mg_substrate
+	set maximum substrate use rate =   5.E-6      #mg_substrate/mg_biomass*s
+	set half velocity constant     = 100.         #mg_substrate/L_free_water
+	set decay rate                 =   5.78E-7    # 1/s
+	set biomass dry density        =   1.39E3     #mg_biomass/cm3_biomass
+end
+ 
+ subsection test functions
+ 	set test function transport = false
+ end
+ 
+ subsection general things
+ 	set output file format = .gp
+ end
