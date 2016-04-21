@@ -59,26 +59,20 @@
 #include <time.h>
 
 // Host dependent pathnames
-#define stringify(Argument) #Argument
-#define PrintHost(Host) {\
-	std::cout << "Compiled on " stringify(Host) << std::endl;}
+//define stringify(Argument) #Argument
+//define PrintHost(Host) {
+//	std::cout << "Compiled on " stringify(Host) << std::endl;}
 
-#ifndef HOST
-	#define HOST unknown_host
-#endif
-#define HOST_OFFICE zerpiko
-#define HOST_CLUSTER c1045890
 #define HEADER_SURFACE_COEFFICIENTS(folder) </home/folder/libraries/SurfaceCoefficients.h>
 #define HEADER_ANALYTICAL_SOLUTION(folder) </home/folder/libraries/AnalyticSolution.h>
 #define HEADER_BOUNDARY_CONDITION(folder) </home/folder/libraries/BoundaryConditions.h>
 #define HEADER_MATERIAL_DATA(folder) </home/folder/libraries/MaterialData.h>
 #define HEADER_DATA_TOOLS(folder) </home/folder/libraries/data_tools.h>
 
-
-#if HOST == HOST_CLUSTER
-#define PATH HOST/code
-#elif HOST == HOST_OFFICE
-#define PATH HOST
+#if _CLUSTER_HOST == 1
+#define PATH c1045890/code
+#elif _OFFICE_HOST == 1
+#define PATH zerpiko
 #endif
 
 #include HEADER_SURFACE_COEFFICIENTS(PATH)
@@ -283,7 +277,7 @@ namespace TRL
   dof_handler(triangulation),
   fe(1)
   {
-	  PrintHost(HOST);
+//	  PrintHost(HOST);
 
 	  std::cout << "Program run with the following arguments:\n";
 	  for (int i=0; i<argc; i++)
