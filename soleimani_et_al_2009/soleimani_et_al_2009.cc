@@ -59,31 +59,33 @@
 #include <time.h>
 
 // Host dependent pathnames
-// raven12
-
 #define stringify(Argument) #Argument
 #define PrintHost(Host) {\
 	std::cout << "Compiled on " stringify(Host) << std::endl;}
 
 #ifndef HOST
-	#define HOST "unknown host"
+	#define HOST unknown_host
 #endif
-
 #define HOST_OFFICE zerpiko
 #define HOST_CLUSTER c1045890
+#define HEADER_SURFACE_COEFFICIENTS(folder) </home/folder/libraries/SurfaceCoefficients.h>
+#define HEADER_ANALYTICAL_SOLUTION(folder) </home/folder/libraries/AnalyticSolution.h>
+#define HEADER_BOUNDARY_CONDITION(folder) </home/folder/libraries/BoundaryConditions.h>
+#define HEADER_MATERIAL_DATA(folder) </home/folder/libraries/MaterialData.h>
+#define HEADER_DATA_TOOLS(folder) </home/folder/libraries/data_tools.h>
 
-#if HOST == HOST_OFFICE
-	// w179.engin.cf.ac.uk
-	#include "/home/zerpiko/libraries/SurfaceCoefficients.h"
-	#include "/home/zerpiko/libraries/AnalyticSolution.h"
-	#include "/home/zerpiko/libraries/BoundaryConditions.h"
-	#include "/home/zerpiko/libraries/MaterialData.h"
-	#include "/home/zerpiko/libraries/data_tools.h"
-#elif HOST == HOST_CLUSTER
 
+#if HOST == HOST_CLUSTER
+#define PATH HOST/code
+#elif HOST == HOST_OFFICE
+#define PATH HOST
 #endif
 
-
+#include HEADER_SURFACE_COEFFICIENTS(PATH)
+#include HEADER_ANALYTICAL_SOLUTION(PATH)
+#include HEADER_BOUNDARY_CONDITION(PATH)
+#include HEADER_MATERIAL_DATA(PATH)
+#include HEADER_DATA_TOOLS(PATH)
 
 //class Hydraulic_Properties {
 //public:
@@ -164,8 +166,10 @@
 namespace TRL
 {
   using namespace dealii;
-#include "/home/zerpiko/libraries/InitialValue.h"
-#include "/home/zerpiko/libraries/Parameters.h"
+
+#define HEADER_INITIAL_VALUE(folder) </home/folder/libraries/InitialValue.h>
+#include HEADER_INITIAL_VALUE(PATH) 
+#include "Parameters.h"
 
   template <int dim>
   class Heat_Pipe
