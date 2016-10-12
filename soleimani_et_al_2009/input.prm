@@ -1,5 +1,5 @@
 subsection time stepping
-  set timestep number max = 1 #5000000
+  set timestep number max = 110000
   set time step           = 1
   set richards theta scheme value  = 1
   set transport theta scheme value = 0.5
@@ -8,7 +8,7 @@ end
 subsection geometric data
   set use mesh file        = false
   set mesh filename        = soleimani_mesh_fig_3.msh
-  set domain size          = 100.  # (cm)
+  set domain size          = 20.  # (cm)
   set refinement level     = 7
 end
 
@@ -20,9 +20,10 @@ subsection equations
 end
 
 subsection initial conditions
-	set initial condition homogeneous flow      = -9.9   # cm
-	set initial condition homogeneous transport =  0.0   # mg_substrate/L_free_water
-	set initial condition homogeneous bacteria  =  1.5E3 # mg_biomass/L_total_water
+	set initial state                           = no_drying # default, dry, saturated, final
+	set initial condition homogeneous flow      =   1.0     # cm
+	set initial condition homogeneous transport =   0.0     # mg_substrate/L_total_water
+	set initial condition homogeneous bacteria  =   2000 #3.85E4    # mg_biomass/L_void_space
 	set initial condition using files           = false
 	set file with initial condition flow        = final_state_flow.ph 
 	set file with initial condition transport   = final_state_transport.ph
@@ -31,39 +32,41 @@ end
 
 subsection boundary conditions
 	set richards fixed at bottom    = true
-	set richards bottom fixed value = -9.9          # (cm)
+	set richards bottom fixed value = 32.09 #25.2          # (cm)
 	set richards bottom flow value  =  0.0002305555 # (cm/s) !!!!!!!!!!
 	
-	set richards fixed at top       = false
-	set richards top fixed value    = -9.9          # (cm)
+	set richards fixed at top       = true
+	set richards top fixed value    =  1.0          # (cm)
 	set richards top flow value     =  0.0002305555 # (cm/s) 20cm/day
 	
-	set transport fixed at top    = false
-	set transport top fixed value = 2000 # (mg_substrate/L)
+	set transport mass entry point = bottom
+	set transport fixed at top     = false
+	set transport top fixed value  = 30000. # (mg_substrate/L_free_water) 30g/l
 end
 
 subsection van genuchten parameters
-	set van genuchten n     = 1.3
-	set van genuchten alpha = 0.18
+	set van genuchten n     = 4
+	set van genuchten alpha = 0.04
 end
 
 subsection hydraulic properties
-	set saturated hydraulic conductivity = 0.079
-	set moisture content saturation      = 0.8
-	set moisture content residual        = 0.08736
-	set porosity                         = 0.8
-	set dispersivity longitudinal        = 1
-	set dispersivity transverse          = 0
+	set relative permeability model      = vandevivere
+	set saturated hydraulic conductivity = 1.2E-2 # cm/s
+	set moisture content saturation      = 0.41
+	set moisture content residual        = 0.04
+	set porosity                         = 0.41
+	set dispersivity longitudinal        = 1.
+	set dispersivity transverse          = 0.
 	set effective diffusion coefficient  = 0.00001 #cm2/s
 end
 
 subsection reaction properties
-	set first order decay factor   =  -8.0208333E-5 #1/s
-	set yield coefficient          =   0.5        #mg_biomass/mg_substrate
-	set maximum substrate use rate =   5.E-6      #mg_substrate/mg_biomass*s
-	set half velocity constant     = 100.         #mg_substrate/L_free_water
-	set decay rate                 =   5.78E-7    # 1/s
-	set biomass dry density        =   1.39E3     #mg_biomass/cm3_biomass
+	set first order decay factor   =  -8.00E-5 #1/s
+	set yield coefficient          =   0.83E+0 #mg_biomass/mg_substrate 2991/3600
+	set maximum substrate use rate =   2.00E-5 #mg_substrate/mg_biomass*s
+	set half velocity constant     =   1.00E+2 #mg_substrate/L_free_water
+	set decay rate                 =   0.00E-7 #1/s
+	set biomass dry density        =   0.25E+3 #mg_biomass/cm3_biomass
 end
  
  subsection test functions
@@ -71,5 +74,7 @@ end
  end
  
  subsection general things
- 	set output file format = .gp
+ 	set output file format         = .vtu
+ 	set output directory           = output
+ 	set output frequency transport = 3600 # (s) 60
  end

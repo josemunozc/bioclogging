@@ -125,10 +125,10 @@ clean:
 # and write the string indicating what we do instead.
 ./%.g.$(OBJEXT) :
 	@echo "==============debug========= $(<F)  ->  $@" $@
-	@$(CXX) $(CXXFLAGS.g) -O0 -c $< -o $@
+	@$(CXX) $(CXXFLAGS.g) -O0 -D_OFFICE_HOST -c $< -o $@
 ./%.$(OBJEXT) :
 	@echo "==============optimized===== $(<F)  ->  $@"
-	@$(CXX) $(CXXFLAGS.o) -Wall -DHOST=`whoami` -c $< -o $@
+	@$(CXX) $(CXXFLAGS.o) -Wall -D_OFFICE_HOST -c $< -o $@
 
 
 #$(MYDIR)/%.g.$(OBJEXT) :
