@@ -20,7 +20,8 @@
 
 #include <deal.II/lac/vector.h>
 #include <deal.II/lac/full_matrix.h>
-#include <deal.II/lac/compressed_sparsity_pattern.h>
+#include <deal.II/lac/dynamic_sparsity_pattern.h>
+//#include <deal.II/lac/compressed_sparsity_pattern.h>
 
 #include <deal.II/lac/sparse_matrix.h>   
 #include <deal.II/lac/solver_bicgstab.h> 
@@ -58,23 +59,29 @@
 #include <algorithm>
 #include <time.h>
 
-#define HEADER_SURFACE_COEFFICIENTS(folder) </home/folder/libraries/SurfaceCoefficients.h>
-#define HEADER_ANALYTICAL_SOLUTION(folder) </home/folder/libraries/AnalyticSolution.h>
-#define HEADER_BOUNDARY_CONDITION(folder) </home/folder/libraries/BoundaryConditions.h>
-#define HEADER_MATERIAL_DATA(folder) </home/folder/libraries/MaterialData.h>
-#define HEADER_DATA_TOOLS(folder) </home/folder/libraries/data_tools.h>
+#include <SurfaceCoefficients.h>
+#include <data_tools.h>
+#include <AnalyticSolution.h>
+#include <BoundaryConditions.h>
+#include <MaterialData.h>
 
-#if _CLUSTER_HOST == 1
-#define PATH c1045890/code
-#elif _OFFICE_HOST == 1
-#define PATH zerpiko
-#endif
+//#define HEADER_SURFACE_COEFFICIENTS(folder) </home/folder/libraries/SurfaceCoefficients.h>
+//#define HEADER_ANALYTICAL_SOLUTION(folder) </home/folder/libraries/AnalyticSolution.h>
+//#define HEADER_BOUNDARY_CONDITION(folder) </home/folder/libraries/BoundaryConditions.h>
+//#define HEADER_MATERIAL_DATA(folder) </home/folder/libraries/MaterialData.h>
+//#define HEADER_DATA_TOOLS(folder) </home/folder/libraries/data_tools.h>
 
-#include HEADER_SURFACE_COEFFICIENTS(PATH)
-#include HEADER_ANALYTICAL_SOLUTION(PATH)
-#include HEADER_BOUNDARY_CONDITION(PATH)
-#include HEADER_MATERIAL_DATA(PATH)
-#include HEADER_DATA_TOOLS(PATH)
+//#if _CLUSTER_HOST == 1
+//#define PATH c1045890/code
+//#elif _OFFICE_HOST == 1
+//#define PATH zerpiko
+//#endif
+
+//#include HEADER_SURFACE_COEFFICIENTS(PATH)
+//#include HEADER_ANALYTICAL_SOLUTION(PATH)
+//#include HEADER_BOUNDARY_CONDITION(PATH)
+//#include HEADER_MATERIAL_DATA(PATH)
+//#include HEADER_DATA_TOOLS(PATH)
 
 class Hydraulic_Properties {
 public:
@@ -357,8 +364,9 @@ namespace TRL
 {
   using namespace dealii;
 
-#define HEADER_INITIAL_VALUE(folder) </home/folder/libraries/InitialValue.h>
-#include HEADER_INITIAL_VALUE(PATH) 
+#include <InitialValue.h>
+//#define HEADER_INITIAL_VALUE(folder) </home/folder/libraries/InitialValue.h>
+//#include HEADER_INITIAL_VALUE(PATH)
 
 
   template <int dim>
@@ -1020,7 +1028,7 @@ namespace TRL
 
 		  for (unsigned int face_number=0; face_number<GeometryInfo<dim>::faces_per_cell; ++face_number)
 		  {
-			  face_boundary_indicator=cell->face(face_number)->boundary_indicator();
+			  face_boundary_indicator=cell->face(face_number)->boundary_id();
 			  if (cell->face(face_number)->at_boundary())
 			  {
 				  if (face_boundary_indicator==0) //inlet, bottom
@@ -1280,12 +1288,13 @@ namespace TRL
 			  hanging_node_constraints);
 	  hanging_node_constraints.close();
 
-	  CompressedSparsityPattern csp(dof_handler.n_dofs(),
+	  DynamicSparsityPattern csp(dof_handler.n_dofs(),
 			  dof_handler.n_dofs());
 
 	  DoFTools::make_sparsity_pattern(dof_handler,csp);
 
 	  hanging_node_constraints.condense(csp);
+	  //SparsityPattern sparsity_pattern;
 	  sparsity_pattern.copy_from(csp);
 
 	  solution_flow_new_iteration.reinit(dof_handler.n_dofs());
@@ -1639,7 +1648,7 @@ namespace TRL
 
 		for (unsigned int face=0; face<GeometryInfo<dim>::faces_per_cell; ++face)
 		{
-			face_boundary_indicator=cell->face(face)->boundary_indicator();
+			face_boundary_indicator=cell->face(face)->boundary_id();
 
 			if ((parameters.transport_fixed_at_top==false) &&
 				(cell->face(face)->at_boundary()) &&
@@ -2011,7 +2020,7 @@ namespace TRL
 
 			  for (unsigned int face=0; face<GeometryInfo<dim>::faces_per_cell; ++face)
 			  {
-				  face_boundary_indicator=cell->face(face)->boundary_indicator();
+				  face_boundary_indicator=cell->face(face)->boundary_id();
 				  if ((cell->face(face)->at_boundary()) &&
 						  (face_boundary_indicator==1))
 				  {
@@ -2735,7 +2744,7 @@ namespace TRL
 			  if ((test_transport==false) && (
 					  (timestep_number%1==0 && transient_drying==true) ||
 					  (timestep_number%1==0 && transient_saturation==true) ||
-					  (timestep_number%200==0 && transient_transport==true) ||
+					  (timestep_number%1==0 && transient_transport==true) ||
 					  (timestep_number==parameters.timestep_number_max-1)))
 			  {
 				  std::cout.setf(std::ios::fixed,std::ios::floatfield);
