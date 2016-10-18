@@ -60,7 +60,7 @@
 #include <time.h>
 
 #include <SurfaceCoefficients.h>
-#include <data_tools.h>
+#include <DataTools.h>
 #include <AnalyticSolution.h>
 #include <BoundaryConditions.h>
 #include <MaterialData.h>
@@ -505,7 +505,8 @@ namespace TRL
 		  std::cout << "Input parameter file: " << argv[1] << "\n\n";
 	  }
 
-	  std::string input_filename = argv[1];
+	  //std::string input_filename = argv[1];
+	  std::istringstream input_filename(argv[1]);
 	  ParameterHandler prm;
 	  Parameters::AllParameters<dim>::declare_parameters (prm);
 	  prm.read_input (input_filename);
@@ -2650,18 +2651,19 @@ namespace TRL
 					  std::cout << "\tActivating moisture flow: "
 					  << parameters.richards_top_flow_value << " cm/s\n";
 
+				  DataTools data_tools;
 				  std::ofstream file;
-				  open_file(file,"state_dry_pressure.ph");
+				  data_tools.open_file(file,"state_dry_pressure.ph");
 				  solution_flow_new_iteration.block_write(file);
-				  close_file(file);
+				  data_tools.close_file(file);
 
-				  open_file(file,"state_dry_substrate.ph");
+				  data_tools.open_file(file,"state_dry_substrate.ph");
 				  solution_transport.block_write(file);
-				  close_file(file);
+				  data_tools.close_file(file);
 
-				  open_file(file,"state_dry_bacteria.ph");
+				  data_tools.open_file(file,"state_dry_bacteria.ph");
 				  new_nodal_biomass_concentration.block_write(file);
-				  close_file(file);
+				  data_tools.close_file(file);
 			  }
 			  /* *
 			   * Begin TRANSPORT -- Saturated conditions have being reached
@@ -2725,18 +2727,19 @@ namespace TRL
 					  std::cout << "Activating decay rate: "
 					  << std::scientific << parameters.first_order_decay_factor << " 1/s\n";
 
+				  DataTools data_tools;
 				  std::ofstream file;
-				  open_file(file,"state_saturated_pressure.ph");
+				  data_tools.open_file(file,"state_saturated_pressure.ph");
 				  solution_flow_new_iteration.block_write(file);
-				  close_file(file);
+				  data_tools.close_file(file);
 
-				  open_file(file,"state_saturated_substrate.ph");
+				  data_tools.open_file(file,"state_saturated_substrate.ph");
 				  solution_transport.block_write(file);
-				  close_file(file);
+				  data_tools.close_file(file);
 
-				  open_file(file,"state_saturated_bacteria.ph");
+				  data_tools.open_file(file,"state_saturated_bacteria.ph");
 				  new_nodal_biomass_concentration.block_write(file);
-				  close_file(file);
+				  data_tools.close_file(file);
 			  }
 			  /* *
 			   * Output info
@@ -2914,18 +2917,19 @@ namespace TRL
 	  /* *
 	   * Save final states to be used as initial conditions for further analyses
 	   * */
+	  DataTools data_tools;
 	  std::ofstream file;
-	  open_file(file,"state_final_pressure.ph");
+	  data_tools.open_file(file,"state_final_pressure.ph");
 	  solution_flow_new_iteration.block_write(file);
-	  close_file(file);
+	  data_tools.close_file(file);
 
-	  open_file(file,"state_final_substrate.ph");
+	  data_tools.open_file(file,"state_final_substrate.ph");
 	  solution_transport.block_write(file);
-	  close_file(file);
+	  data_tools.close_file(file);
 
-	  open_file(file,"state_final_bacteria.ph");
+	  data_tools.open_file(file,"state_final_bacteria.ph");
 	  new_nodal_biomass_concentration.block_write(file);
-	  close_file(file);
+	  data_tools.close_file(file);
 
 	  output_results();
 	  std::cout << "\t Job Done!!"
