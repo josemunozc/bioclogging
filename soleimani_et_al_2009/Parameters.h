@@ -214,7 +214,7 @@ AllParameters<dim>::declare_parameters (ParameterHandler &prm)
 
 	prm.enter_subsection("initial conditions");
 	{
-		prm.declare_entry("initial state", "define initial state of the soil",
+		prm.declare_entry("initial state", "no_drying",
 				Patterns::Anything(), "a default value will initialise the soil "
 				"with default values, other options will load corresponding "
 				"files to fill solution vectors");

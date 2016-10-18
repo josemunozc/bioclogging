@@ -505,8 +505,8 @@ namespace TRL
 		  std::cout << "Input parameter file: " << argv[1] << "\n\n";
 	  }
 
-	  //std::string input_filename = argv[1];
-	  std::istringstream input_filename(argv[1]);
+	  std::string input_filename = argv[1];
+	  //std::istringstream input_filename(argv[1]);
 	  ParameterHandler prm;
 	  Parameters::AllParameters<dim>::declare_parameters (prm);
 	  prm.read_input (input_filename);
