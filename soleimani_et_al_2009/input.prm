@@ -1,5 +1,5 @@
 subsection time stepping
-  set timestep number max = 10 #110000
+  set timestep number max = 110000
   set time step           = 1
   set richards theta scheme value  = 1
   set transport theta scheme value = 0.5

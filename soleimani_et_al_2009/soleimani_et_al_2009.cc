@@ -65,24 +65,6 @@
 #include <BoundaryConditions.h>
 #include <MaterialData.h>
 
-//#define HEADER_SURFACE_COEFFICIENTS(folder) </home/folder/libraries/SurfaceCoefficients.h>
-//#define HEADER_ANALYTICAL_SOLUTION(folder) </home/folder/libraries/AnalyticSolution.h>
-//#define HEADER_BOUNDARY_CONDITION(folder) </home/folder/libraries/BoundaryConditions.h>
-//#define HEADER_MATERIAL_DATA(folder) </home/folder/libraries/MaterialData.h>
-//#define HEADER_DATA_TOOLS(folder) </home/folder/libraries/data_tools.h>
-
-//#if _CLUSTER_HOST == 1
-//#define PATH c1045890/code
-//#elif _OFFICE_HOST == 1
-//#define PATH zerpiko
-//#endif
-
-//#include HEADER_SURFACE_COEFFICIENTS(PATH)
-//#include HEADER_ANALYTICAL_SOLUTION(PATH)
-//#include HEADER_BOUNDARY_CONDITION(PATH)
-//#include HEADER_MATERIAL_DATA(PATH)
-//#include HEADER_DATA_TOOLS(PATH)
-
 class Hydraulic_Properties {
 public:
 
@@ -477,6 +459,7 @@ namespace TRL
     Vector<double> new_nodal_specific_moisture_capacity;
     Vector<double> new_nodal_flow_speed;
     Vector<double> old_nodal_flow_speed;
+    std::vector<std::vector<double> > average_hydraulic_conductivity_vector;
     Parameters::AllParameters<dim>  parameters;
 
     unsigned int figure_count;
@@ -600,17 +583,13 @@ namespace TRL
 			  << "\n\tTransport output frequency: " << parameters.output_frequency_transport
 			  << "\n\n";
   }
-  //**************************************************************************************
-  //--------------------------------------------------------------------------------------
-  //**************************************************************************************
+
   template<int dim>
   Heat_Pipe<dim>::~Heat_Pipe ()
   {
     dof_handler.clear ();
   }
-  //**************************************************************************************
-  //--------------------------------------------------------------------------------------
-  //**************************************************************************************
+
 //  template <int dim>
 //  void Heat_Pipe<dim>::hydraulic_properties(
 //		  double pressure_head,
@@ -894,9 +873,7 @@ namespace TRL
 		  cell_integer_index++;
 	  }
   }
-  //**************************************************************************************
-  //--------------------------------------------------------------------------------------
-  //**************************************************************************************
+
   template <int dim>
   void Heat_Pipe<dim>::calculate_mass_balance_ratio()
   {
@@ -1135,9 +1112,7 @@ namespace TRL
 		  cell_integer_index++;
 	  }
   }
-  //**************************************************************************************
-  //--------------------------------------------------------------------------------------
-  //**************************************************************************************
+
   template <int dim>
   void Heat_Pipe<dim>::read_grid()
   {
@@ -1154,9 +1129,7 @@ namespace TRL
 		  triangulation.refine_global(refinement_level);
 	  }
   }
-  //**************************************************************************************
-  //--------------------------------------------------------------------------------------
-  //**************************************************************************************
+
   template <int dim>
   void Heat_Pipe<dim>::refine_grid(bool adaptive)
   {
@@ -1277,9 +1250,7 @@ namespace TRL
 	   old_nodal_biomass_concentration=transfer_out[6];
 	   new_nodal_biomass_concentration=transfer_out[7];
   }
-  //**************************************************************************************
-  //--------------------------------------------------------------------------------------
-  //**************************************************************************************
+
   template <int dim>
   void Heat_Pipe<dim>::setup_system()
   {
@@ -1320,9 +1291,7 @@ namespace TRL
 	  new_nodal_flow_speed.reinit(dof_handler.n_dofs());
 	  old_nodal_flow_speed.reinit(dof_handler.n_dofs());
   }
-  //**************************************************************************************
-  //--------------------------------------------------------------------------------------
-  //**************************************************************************************
+
   template <int dim>
   void Heat_Pipe<dim>::assemble_system_transport()
   {
@@ -1823,9 +1792,7 @@ namespace TRL
 //				system_rhs_transport);
 //    }
   }
-  //**************************************************************************************
-  //--------------------------------------------------------------------------------------
-  //**************************************************************************************
+
   template <int dim>
   void Heat_Pipe<dim>::assemble_system_flow()
   {  
@@ -2126,9 +2093,7 @@ namespace TRL
 				  system_rhs_flow);
 	  }
   }
-  //**************************************************************************************
-  //--------------------------------------------------------------------------------------
-  //**************************************************************************************
+
   template <int dim>
   void Heat_Pipe<dim>::solve_system_flow ()
   {
@@ -2141,11 +2106,9 @@ namespace TRL
 			  system_rhs_flow,preconditioner);
 	  hanging_node_constraints.distribute(solution_flow_new_iteration);
   }
-  //**************************************************************************************
-  //--------------------------------------------------------------------------------------
-  //**************************************************************************************
+
   template <int dim>
-    void Heat_Pipe<dim>::solve_system_transport ()
+  void Heat_Pipe<dim>::solve_system_transport ()
     {
 	  SolverControl solver_control_transport(1000*solution_transport.size(),
 			  1e-8*system_rhs_transport.l2_norm());
@@ -2158,9 +2121,7 @@ namespace TRL
 			  system_rhs_transport,preconditioner_transport);
 	  hanging_node_constraints.distribute(solution_transport);
     }
-  //**************************************************************************************
-  //--------------------------------------------------------------------------------------
-  //**************************************************************************************
+
   template <int dim>
   void Heat_Pipe<dim>::output_results () const
   {
@@ -2245,9 +2206,7 @@ namespace TRL
 				  << std::endl;
 	  }
   }
-  //**************************************************************************************
-  //--------------------------------------------------------------------------------------
-  //**************************************************************************************
+
   template <int dim>
   void Heat_Pipe<dim>::initial_condition()
   {
@@ -2449,9 +2408,7 @@ namespace TRL
 	    * */
 	   estimate_flow_velocities();
   }
-  //**************************************************************************************
-  //--------------------------------------------------------------------------------------
-  //**************************************************************************************
+
   template <int dim>
   void Heat_Pipe<dim>::run()
   {
@@ -2747,13 +2704,13 @@ namespace TRL
 			  if ((test_transport==false) && (
 					  (timestep_number%1==0 && transient_drying==true) ||
 					  (timestep_number%1==0 && transient_saturation==true) ||
-					  (timestep_number%1==0 && transient_transport==true) ||
+					  (timestep_number%100==0 && transient_transport==true) ||
 					  (timestep_number==parameters.timestep_number_max-1)))
 			  {
 				  std::cout.setf(std::ios::fixed,std::ios::floatfield);
 				  std::setprecision(10);
 				  std::cout << std::fixed
-						  << "ts: "       << std::setw(6)  << timestep_number
+						  << "tsn: "      << std::setw(6)  << timestep_number
 						  << "  time: "   << std::setw(10) << std::setprecision(9) << (time-milestone_time)/3600 << " h"
 						  << std::scientific
 						  << "  b_mass: " << std::setw(9)  << std::setprecision(5) << change_in_biomass_from_beginning << " cm3/cm2";
@@ -2772,14 +2729,23 @@ namespace TRL
 
 				  double average_hydraulic_conductivity=0.;
 				  double effective_hydraulic_conductivity=0.;
-				  for (unsigned int i=0; i<new_nodal_hydraulic_conductivity.size(); i++)
+
 				  {
-					  average_hydraulic_conductivity+=
-							  new_nodal_hydraulic_conductivity[i]/
-							  new_nodal_hydraulic_conductivity.size();
-					  effective_hydraulic_conductivity+=
-							  1./
-							  (new_nodal_hydraulic_conductivity[i]*new_nodal_hydraulic_conductivity.size());
+					  std::vector<double> average_hydraulic_conductivity_vector_row;
+					  for (unsigned int i=0; i<new_nodal_hydraulic_conductivity.size(); i++)
+					  {
+						  average_hydraulic_conductivity+=
+								  new_nodal_hydraulic_conductivity[i]/
+								  new_nodal_hydraulic_conductivity.size();
+						  effective_hydraulic_conductivity+=
+								  1./
+								  (new_nodal_hydraulic_conductivity[i]*new_nodal_hydraulic_conductivity.size());
+					  }
+					  average_hydraulic_conductivity_vector_row.push_back(timestep_number);
+					  average_hydraulic_conductivity_vector_row.push_back((time-milestone_time)/3600);
+					  average_hydraulic_conductivity_vector_row.push_back(average_hydraulic_conductivity);
+					  average_hydraulic_conductivity_vector_row.push_back(1./effective_hydraulic_conductivity);
+					  average_hydraulic_conductivity_vector.push_back(average_hydraulic_conductivity_vector_row);
 				  }
 
 				  double concentration_at_inlet
@@ -2917,19 +2883,26 @@ namespace TRL
 	  /* *
 	   * Save final states to be used as initial conditions for further analyses
 	   * */
+	  //	  DataTools data_tools;
+	  //	  std::ofstream file;
+	  //	  data_tools.open_file(file,"state_final_pressure.ph");
+	  //	  solution_flow_new_iteration.block_write(file);
+	  //	  data_tools.close_file(file);
+	  //
+	  //	  data_tools.open_file(file,"state_final_substrate.ph");
+	  //	  solution_transport.block_write(file);
+	  //	  data_tools.close_file(file);
+	  //
+	  //	  data_tools.open_file(file,"state_final_bacteria.ph");
+	  //	  new_nodal_biomass_concentration.block_write(file);
+	  //	  data_tools.close_file(file);
+
+	  std::ofstream output_file("average_hydraulic_conductivity.txt");
 	  DataTools data_tools;
-	  std::ofstream file;
-	  data_tools.open_file(file,"state_final_pressure.ph");
-	  solution_flow_new_iteration.block_write(file);
-	  data_tools.close_file(file);
 
-	  data_tools.open_file(file,"state_final_substrate.ph");
-	  solution_transport.block_write(file);
-	  data_tools.close_file(file);
+	  data_tools.print_data(output_file,
+			  average_hydraulic_conductivity_vector);
 
-	  data_tools.open_file(file,"state_final_bacteria.ph");
-	  new_nodal_biomass_concentration.block_write(file);
-	  data_tools.close_file(file);
 
 	  output_results();
 	  std::cout << "\t Job Done!!"
