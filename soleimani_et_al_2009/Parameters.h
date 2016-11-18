@@ -77,6 +77,7 @@ struct AllParameters
 	double dispersivity_transverse;
 	double effective_diffusion_coefficient;
 	std::string relative_permeability_model;
+	std::string sand_fraction;
 };
 
 template <int dim>
@@ -322,6 +323,9 @@ AllParameters<dim>::declare_parameters (ParameterHandler &prm)
 
 	prm.enter_subsection("hydraulic properties");
 	{
+		prm.declare_entry("sand fraction", "0um",
+				Patterns::Anything(),"string defining the sand "
+				"fraction used.");
 		prm.declare_entry("saturated hydraulic conductivity","0.00922",
 				Patterns::Double(),"Declare saturated hydraulic "
 				"conductivity in cm/s");
@@ -338,8 +342,8 @@ AllParameters<dim>::declare_parameters (ParameterHandler &prm)
 		prm.declare_entry("effective diffusion coefficient","0.00001",
 				Patterns::Double()," ");
 		prm.declare_entry("relative permeability model", "soleimani",
-				Patterns::Anything(), "choose the model to calculate the "
-				"relativ hydraulic conductivity.");
+				Patterns::Anything(),"choose the model to calculate the "
+				"relative hydraulic conductivity.");
 	}
 	prm.leave_subsection();
 
@@ -464,6 +468,7 @@ void AllParameters<dim>::parse_parameters (ParameterHandler &prm)
 
 	prm.enter_subsection("hydraulic properties");
 	{
+		sand_fraction                   =prm.get       ("sand fraction");
 		saturated_hydraulic_conductivity=prm.get_double("saturated hydraulic conductivity");
 		moisture_content_saturation     =prm.get_double("moisture content saturation");
 		moisture_content_residual       =prm.get_double("moisture content residual");

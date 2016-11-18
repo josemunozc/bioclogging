@@ -2813,11 +2813,11 @@ namespace TRL
 		  double output_frequency_saturation=1;
 		  double output_frequency_transport=parameters.output_frequency_transport;
 
-		  if ((test_transport==false) && (
-				  (transient_drying==true && time-milestone_time>=figure_count*output_frequency_drying) ||
-				  (transient_saturation==true && time-milestone_time>=figure_count*output_frequency_saturation) ||
-				  (transient_transport==true && time-milestone_time>=figure_count*output_frequency_transport) ||
-				  (timestep_number==parameters.timestep_number_max-1)))
+		  if ((test_transport==false) &&
+				  ((transient_drying==true && time-milestone_time>=figure_count*output_frequency_drying) ||
+					(transient_saturation==true && time-milestone_time>=figure_count*output_frequency_saturation) ||
+					(transient_transport==true && output_frequency_transport!=0 && time-milestone_time>=figure_count*output_frequency_transport) ||
+					(timestep_number==parameters.timestep_number_max-1)))
 		  {
 			  output_results();
 			  figure_count++;
@@ -2897,12 +2897,20 @@ namespace TRL
 	  //	  new_nodal_biomass_concentration.block_write(file);
 	  //	  data_tools.close_file(file);
 
-	  std::ofstream output_file("average_hydraulic_conductivity.txt");
+
+	  std::stringstream parameter_value;
+	  parameter_value <<parameters.sand_fraction;
+
+	  std::string filename;
+	  filename = "average_hydraulic_conductivity_sf_"
+			  + parameter_value.str()
+			  + ".txt";
+
+	  std::ofstream output_file(filename);
 	  DataTools data_tools;
 
 	  data_tools.print_data(output_file,
 			  average_hydraulic_conductivity_vector);
-
 
 	  output_results();
 	  std::cout << "\t Job Done!!"

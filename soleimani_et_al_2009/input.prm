@@ -23,7 +23,7 @@ subsection initial conditions
 	set initial state                           = no_drying # default, dry, saturated, final
 	set initial condition homogeneous flow      =   1.0     # cm
 	set initial condition homogeneous transport =   0.0     # mg_substrate/L_total_water
-	set initial condition homogeneous bacteria  =   2000 #3.85E4    # mg_biomass/L_void_space
+	set initial condition homogeneous bacteria  =   2000    #3.85E4    # mg_biomass/L_void_space
 	set initial condition using files           = false
 	set file with initial condition flow        = final_state_flow.ph 
 	set file with initial condition transport   = final_state_transport.ph
@@ -32,7 +32,7 @@ end
 
 subsection boundary conditions
 	set richards fixed at bottom    = true
-	set richards bottom fixed value = 32.09 #25.2          # (cm)
+	set richards bottom fixed value = 59.3 # (cm)
 	set richards bottom flow value  =  0.0002305555 # (cm/s) !!!!!!!!!!
 	
 	set richards fixed at top       = true
@@ -50,13 +50,14 @@ subsection van genuchten parameters
 end
 
 subsection hydraulic properties
-	set relative permeability model      = vandevivere
-	set saturated hydraulic conductivity = 1.2E-2 # cm/s
-	set moisture content saturation      = 0.41
-	set moisture content residual        = 0.04
-	set porosity                         = 0.41
-	set dispersivity longitudinal        = 1.
-	set dispersivity transverse          = 0.
+	set sand fraction                    = 150um #
+	set relative permeability model      = vandevivere #
+	set saturated hydraulic conductivity = 0.0041 # cm/s
+	set moisture content saturation      = 0.42 #
+	set moisture content residual        = 0.04 #
+	set porosity                         = 0.42 #
+	set dispersivity longitudinal        = 1.   #
+	set dispersivity transverse          = 0.   #
 	set effective diffusion coefficient  = 0.00001 #cm2/s
 end
 
@@ -76,5 +77,5 @@ end
  subsection general things
  	set output file format         = .vtu
  	set output directory           = output
- 	set output frequency transport = 3600 # (s) 60
+ 	set output frequency transport = 0 # (s) 60 set to 0 to stop any output
  end
