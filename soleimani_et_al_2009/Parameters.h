@@ -67,6 +67,7 @@ struct AllParameters
 	std::string initial_state;
 	std::string transport_mass_entry_point;
 	std::string output_directory;
+	bool output_data_in_terminal;
 
 	// Hydraulic properties
 	double saturated_hydraulic_conductivity;
@@ -139,6 +140,8 @@ AllParameters<dim>::AllParameters ()
 	dispersivity_longitudinal       =0.;
 	dispersivity_transverse         =0.;
 	effective_diffusion_coefficient =0.;
+
+	output_data_in_terminal=false;
 }
 
 template <int dim>
@@ -380,6 +383,10 @@ AllParameters<dim>::declare_parameters (ParameterHandler &prm)
 		prm.declare_entry("output directory", "output",
 				Patterns::Anything(),"name of output "
 				"directory to store all output files.");
+		prm.declare_entry("output data in terminal", "true",
+				Patterns::Bool(),"if true, the program will generate output "
+						"in the terminal. Set to false to avoid cluttering "
+						"and speed up a bit the program.");
 	}
 	prm.leave_subsection();
 }
@@ -501,7 +508,8 @@ void AllParameters<dim>::parse_parameters (ParameterHandler &prm)
 	{
 		output_file_format        =prm.get("output file format");
 		output_frequency_transport=prm.get_integer("output frequency transport");
-		output_directory	        =prm.get("output directory");
+		output_directory	      =prm.get("output directory");
+		output_data_in_terminal   =prm.get_bool("output data in terminal");
 	}
 	prm.leave_subsection();
 }
