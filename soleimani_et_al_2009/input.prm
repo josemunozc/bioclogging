@@ -1,43 +1,44 @@
 subsection time stepping
-  set timestep number max = 110000
-  set time step           = 1
+  set timestep number max = 1000 #110000
+  set time step           = 15
   set richards theta scheme value  = 1
   set transport theta scheme value = 0.5
 end
 
 subsection geometric data
-  set use mesh file        = false
-  set mesh filename        = soleimani_mesh_fig_3.msh
-  set domain size          = 20.  # (cm)
+  set use mesh file        = true
+  set mesh filename        = untitled.msh #soleimani_mesh_fig_3.msh
+  set domain size          = 100.  # (cm)
   set refinement level     = 7
 end
 
 subsection equations
-	set moisture transport     = mixed
-	set hydraulic properties   = van_genuchten_1980
-	set lumped matrix (qtrapez)= true
-	set homogeneous decay rate = false
+  set moisture transport     = mixed
+  set hydraulic properties   = van_genuchten_1980
+  set lumped matrix (qtrapez)= true
+  set homogeneous decay rate = false
+  set coupled transport      = true
 end
 
 subsection initial conditions
-	set initial state                           = no_drying # default, dry, saturated, final
-	set initial condition homogeneous flow      =   1.0     # cm
-	set initial condition homogeneous transport =   0.0     # mg_substrate/L_total_water
-	set initial condition homogeneous bacteria  = 500.0     #3.85E4    # mg_biomass/L_void_space
-	set initial condition using files           = false
-	set file with initial condition flow        = final_state_flow.ph 
-	set file with initial condition transport   = final_state_transport.ph
-	set file with initial condition bacteria    = final_state_bacteria.ph
+  set initial state                           = no_drying # default, dry, saturated, final
+  set initial condition homogeneous flow      =   1.0     # cm
+  set initial condition homogeneous transport =   0.0     # mg_substrate/L_total_water
+  set initial condition homogeneous bacteria  = 0 #500.0     #3.85E4    # mg_biomass/L_void_space
+  set initial condition using files           = false
+  set file with initial condition flow        = final_state_flow.ph 
+  set file with initial condition transport   = final_state_transport.ph
+  set file with initial condition bacteria    = final_state_bacteria.ph
 end
 
 subsection boundary conditions
 	set richards fixed at bottom    = true
-	set richards bottom fixed value = 59.3 # (cm)
-	set richards bottom flow value  =  0.0002305555 # (cm/s) !!!!!!!!!!
+	set richards bottom fixed value = 118.12          # (cm)
+	set richards bottom flow value  =   0.0002305555 # (cm/s) !!!!!!!!!!
 	
 	set richards fixed at top       = true
-	set richards top fixed value    =  1.0          # (cm)
-	set richards top flow value     =  0.0002305555 # (cm/s) 20cm/day
+	set richards top fixed value    =   1.0          # (cm)
+	set richards top flow value     =   0.0002305555 # (cm/s) 20cm/day
 	
 	set transport mass entry point = bottom
 	set transport fixed at top     = false
@@ -52,12 +53,12 @@ end
 subsection hydraulic properties
 	set sand fraction                    = 300um #
 	set relative permeability model      = vandevivere #
-	set saturated hydraulic conductivity = 0.032 # cm/s
+	set saturated hydraulic conductivity = 0.05 #0.032 # cm/s
 	set moisture content saturation      = 0.408 #
 	set moisture content residual        = 0.04 #
 	set porosity                         = 0.408 #
-	set dispersivity longitudinal        = 1.   #
-	set dispersivity transverse          = 0.   #
+	set dispersivity longitudinal        = 0. #1
+	set dispersivity transverse          = 0. #
 	set effective diffusion coefficient  = 0.00001 #cm2/s
 end
 
@@ -77,6 +78,6 @@ end
  subsection general things
  	set output file format         = .vtu
  	set output directory           = output
- 	set output frequency transport = 0 # (s) 60 set to 0 to stop any output
+ 	set output frequency transport = 1 # (s) 60 set to 0 to stop any output
  	set output data in terminal    = true #
  end
