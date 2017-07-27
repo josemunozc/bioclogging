@@ -1,12 +1,12 @@
 subsection time stepping
-  set timestep number max = 1000 #110000
-  set time step           = 15
+  set timestep number max = 150 #1500 #110000
+  set time step           = 1
   set richards theta scheme value  = 1
   set transport theta scheme value = 0.5
 end
 
 subsection geometric data
-  set use mesh file        = true
+  set use mesh file        = false
   set mesh filename        = untitled.msh #soleimani_mesh_fig_3.msh
   set domain size          = 100.  # (cm)
   set refinement level     = 7
@@ -23,8 +23,8 @@ end
 subsection initial conditions
   set initial state                           = no_drying # default, dry, saturated, final
   set initial condition homogeneous flow      =   1.0     # cm
-  set initial condition homogeneous transport =   0.0     # mg_substrate/L_total_water
-  set initial condition homogeneous bacteria  = 0 #500.0     #3.85E4    # mg_biomass/L_void_space
+  set initial condition homogeneous transport =  30000 # 0.0     # mg_substrate/L_total_water
+  set initial condition homogeneous bacteria  = 5000.0     #3.85E4    # mg_biomass/L_void_space
   set initial condition using files           = false
   set file with initial condition flow        = final_state_flow.ph 
   set file with initial condition transport   = final_state_transport.ph
@@ -32,52 +32,52 @@ subsection initial conditions
 end
 
 subsection boundary conditions
-	set richards fixed at bottom    = true
-	set richards bottom fixed value = 118.12          # (cm)
-	set richards bottom flow value  =   0.0002305555 # (cm/s) !!!!!!!!!!
+  set richards fixed at bottom    = true
+  set richards bottom fixed value = 125.9          # (cm)
+  set richards bottom flow value  =   0.0002305555 # (cm/s) !!!!!!!!!!
 	
-	set richards fixed at top       = true
-	set richards top fixed value    =   1.0          # (cm)
-	set richards top flow value     =   0.0002305555 # (cm/s) 20cm/day
+  set richards fixed at top       = true
+  set richards top fixed value    =   1.0          # (cm)
+  set richards top flow value     =   0.0002305555 # (cm/s) 20cm/day
 	
-	set transport mass entry point = bottom
-	set transport fixed at top     = false
-	set transport top fixed value  = 30000. # (mg_substrate/L_free_water) 30g/l
+  set transport mass entry point = bottom
+  set transport fixed at top     = false
+  set transport top fixed value  = 30000. # (mg_substrate/L_free_water) 30g/l
 end
 
 subsection van genuchten parameters
-	set van genuchten n     = 4
-	set van genuchten alpha = 0.04
+  set van genuchten n     = 4
+  set van genuchten alpha = 0.04
 end
 
 subsection hydraulic properties
-	set sand fraction                    = 300um #
-	set relative permeability model      = vandevivere #
-	set saturated hydraulic conductivity = 0.05 #0.032 # cm/s
-	set moisture content saturation      = 0.408 #
-	set moisture content residual        = 0.04 #
-	set porosity                         = 0.408 #
-	set dispersivity longitudinal        = 0. #1
-	set dispersivity transverse          = 0. #
-	set effective diffusion coefficient  = 0.00001 #cm2/s
+  set sand fraction                    = 300um #
+  set relative permeability model      = vandevivere #
+  set saturated hydraulic conductivity = 0.032 #0.0255052 #0.032 # cm/s
+  set moisture content saturation      = 0.408 #
+  set moisture content residual        = 0.04  #
+  set porosity                         = 0.408   #
+  set dispersivity longitudinal        = 1.0     #
+  set dispersivity transverse          = 0.0     #
+  set effective diffusion coefficient  = 0.00001 #cm2/s
 end
 
 subsection reaction properties
-	set first order decay factor   =  -8.00E-5 #1/s
-	set yield coefficient          = 0.86 #mg_biomass/mg_substrate 2991/3600
-	set maximum substrate use rate = 0.00002 #mg_substrate/mg_biomass*s 2.00E-5
-	set half velocity constant     = 10000 #mg_substrate/L_free_water 1.00E+2
-	set decay rate                 =   6.00E-7 #1/s 0.00E-7
-	set biomass dry density        =   0.10E+3 #mg_biomass/cm3_biomass 1.00E3 water?
+  set first order decay factor   = -4.08E-5	 #1/s
+  set yield coefficient          =  0.86    #mg_biomass/mg_substrate 2991/3600
+  set maximum substrate use rate =  0.00002 #mg_substrate/mg_biomass*s 2.00E-5
+  set half velocity constant     =  1.00E-4  #mg_substrate/L_free_water 1.00E+2
+  set decay rate                 =  6.00E-7 #1/s 0.00E-7
+  set biomass dry density        =  0.10E+3 #mg_biomass/cm3_biomass 1.00E3 water?
 end
  
  subsection test functions
- 	set test function transport = false
+   set test function transport = false
  end
  
  subsection general things
- 	set output file format         = .vtu
- 	set output directory           = output
- 	set output frequency transport = 1 # (s) 60 set to 0 to stop any output
- 	set output data in terminal    = true #
+   set output file format         = .vtu
+   set output directory           = output
+   set output frequency transport = 1 # (s) 60 set to 0 to stop any output
+   set output data in terminal    = true #
  end
