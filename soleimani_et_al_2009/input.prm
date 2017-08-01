@@ -1,5 +1,5 @@
 subsection time stepping
-  set timestep number max = 150 #1500 #110000
+  set timestep number max = 11000 #110000
   set time step           = 1
   set richards theta scheme value  = 1
   set transport theta scheme value = 0.5
@@ -22,9 +22,9 @@ end
 
 subsection initial conditions
   set initial state                           = no_drying # default, dry, saturated, final
-  set initial condition homogeneous flow      =   1.0     # cm
-  set initial condition homogeneous transport =  30000 # 0.0     # mg_substrate/L_total_water
-  set initial condition homogeneous bacteria  = 5000.0     #3.85E4    # mg_biomass/L_void_space
+  set initial condition homogeneous flow      =    1.0     # cm
+  set initial condition homogeneous transport =    0.0 # mg_substrate/L_total_water
+  set initial condition homogeneous bacteria  = 5000.0 #3.85E4 # mg_biomass/L_void_space
   set initial condition using files           = false
   set file with initial condition flow        = final_state_flow.ph 
   set file with initial condition transport   = final_state_transport.ph
@@ -53,7 +53,7 @@ end
 subsection hydraulic properties
   set sand fraction                    = 300um #
   set relative permeability model      = vandevivere #
-  set saturated hydraulic conductivity = 0.032 #0.0255052 #0.032 # cm/s
+  set saturated hydraulic conductivity = 3.2E-2# 2.5505222162E-2 #0.032 # cm/s
   set moisture content saturation      = 0.408 #
   set moisture content residual        = 0.04  #
   set porosity                         = 0.408   #
@@ -63,11 +63,11 @@ subsection hydraulic properties
 end
 
 subsection reaction properties
-  set first order decay factor   = -4.08E-5	 #1/s
+  set first order decay factor   = -4.08E-5 #1/s
   set yield coefficient          =  0.86    #mg_biomass/mg_substrate 2991/3600
-  set maximum substrate use rate =  0.00002 #mg_substrate/mg_biomass*s 2.00E-5
-  set half velocity constant     =  1.00E-4  #mg_substrate/L_free_water 1.00E+2
-  set decay rate                 =  6.00E-7 #1/s 0.00E-7
+  set maximum substrate use rate =  2.00E-5 #mg_substrate/mg_biomass*s 2.00E-5
+  set half velocity constant     =  1.00E+2  #mg_substrate/L_free_water 1.00E+2
+  set decay rate                 =  0.00E-7 #1/s 6.00E-7
   set biomass dry density        =  0.10E+3 #mg_biomass/cm3_biomass 1.00E3 water?
 end
  

@@ -338,34 +338,6 @@ namespace TRL
   using namespace dealii;
 #include <InitialValue.h>
 
-  // template<int dim>
-  // class BottomPressure:public Function<dim>
-  // {
-  // public:
-  //   BottomPressure():Function<dim>(){}
-    
-  //   virtual double value (const Point<dim>   &p,
-  // 			  const unsigned int  component = 0) const;
-  // };
-
-  // template <int dim>
-  // double BottomPressure<dim>::value (const Point<dim>   &p,
-  // 				     const unsigned int) const
-  // {
-  //   double required_velocity=7.834E-3;//cm/s
-  //   double return_value=
-  //     1.+
-  //     100.*(required_velocity/0.05+1.);
-    
-  //   // double x=p[0];
-  //   // if ((x<-30. && x>-35.) || (x<-65. && x>-70.))
-  //   //   {
-  //   // 	return_value-=3.;
-  //   //   }
-      
-  //   return return_value;
-  // }
-
   
   template <int dim>
   class Heat_Pipe
@@ -455,6 +427,8 @@ namespace TRL
     Vector<double> new_nodal_hydraulic_conductivity;
     Vector<double> old_nodal_specific_moisture_capacity;
     Vector<double> new_nodal_specific_moisture_capacity;
+    Vector<double> old_nodal_free_saturation;
+    Vector<double> new_nodal_free_saturation;
     Vector<double> boundary_ids;
     std::vector<std::vector<double> > average_hydraulic_conductivity_vector;
     Parameters::AllParameters<dim>  parameters;
@@ -470,6 +444,8 @@ namespace TRL
     double nutrients_in_domain_current;
     double cumulative_flow_at_top;
     double cumulative_flow_at_bottom;
+    double biomass_in_domain_previous;
+    double biomass_in_domain_current;
     std::map<std::vector<double>,unsigned int> repeated_points;
   };
 
@@ -534,6 +510,8 @@ namespace TRL
     nutrients_in_domain_current=0.;
     cumulative_flow_at_top=0.;
     cumulative_flow_at_bottom=0.;
+    biomass_in_domain_previous=0.;
+    biomass_in_domain_current=0.;
 
     if (parameters.initial_state.compare("default")==0 ||
 	parameters.initial_state.compare("final")==0)
@@ -598,6 +576,7 @@ namespace TRL
     new_nodal_total_moisture_content.reinit(dof_handler.n_dofs());
     new_nodal_free_moisture_content.reinit (dof_handler.n_dofs());
     new_nodal_specific_moisture_capacity.reinit(dof_handler.n_dofs());
+    new_nodal_free_saturation.reinit       (dof_handler.n_dofs());
     
     QGauss<dim>quadrature_formula(2);
     FEValues<dim>fe_values(fe, quadrature_formula,
@@ -613,6 +592,7 @@ namespace TRL
     Vector<double> cell_total_moisture_content(dofs_per_cell);
     Vector<double> cell_free_moisture_content(dofs_per_cell);
     Vector<double> cell_moisture_capacity(dofs_per_cell);
+    Vector<double> cell_free_saturation(dofs_per_cell);
 
     Vector<double> old_biomass_concentration;
     
@@ -633,6 +613,7 @@ namespace TRL
 	cell_total_moisture_content=0.;
 	cell_free_moisture_content=0.;
 	cell_moisture_capacity=0.;
+	cell_free_saturation=0.;
 
 	old_biomass_concentration
 	  .reinit(cell->get_fe().dofs_per_cell);
@@ -712,25 +693,27 @@ namespace TRL
 		throw -1;
 	      }
 	    
+	    double effective_saturation_free=
+	      hydraulic_properties
+	      .get_effective_free_saturation(old_pressure_values[i],
+					     old_biomass_concentration[i],
+					     parameters.biomass_dry_density);
+	    cell_free_saturation(i)+=(1./it->second)*
+	      effective_saturation_free;
+	    
 	    if (transient_drying==false)
 	      {
-		double effective_saturation_free=
-		  hydraulic_properties
-		  .get_effective_free_saturation(old_pressure_values[i],
-						 old_biomass_concentration[i],
-						 parameters.biomass_dry_density);
 		double old_substrate=0;
 		if (old_transport_values[i]>0)
 		  old_substrate=old_transport_values[i];
 		
 		cell_biomass_concentration(i)+=(1./it->second)*
 		  old_biomass_concentration(i)
-		  // *
-		  // exp((parameters.yield_coefficient*parameters.maximum_substrate_use_rate*
-		  //      /*effective_saturation_free*/old_substrate/
-		  //      (/*effective_saturation_free*/old_substrate+parameters.half_velocity_constant/1000.)
-		  //      -parameters.decay_rate)*time_step)
-		  ;
+		  *
+		  exp((parameters.yield_coefficient*parameters.maximum_substrate_use_rate*
+		       effective_saturation_free*old_substrate/
+		       (effective_saturation_free*old_substrate+parameters.half_velocity_constant/1000.)
+		       -parameters.decay_rate)*time_step);
 		
 		cell_biomass_fraction(i)+=
 		  cell_biomass_concentration(i)/
@@ -765,6 +748,7 @@ namespace TRL
 	    new_nodal_total_moisture_content(local_dof_indices[i])+=cell_total_moisture_content(i);
 	    new_nodal_free_moisture_content(local_dof_indices[i])+=cell_free_moisture_content(i);
 	    new_nodal_specific_moisture_capacity(local_dof_indices[i])+=cell_moisture_capacity(i);
+	    new_nodal_free_saturation(local_dof_indices[i])+=cell_free_saturation(i);
 	  }
       }
   }
@@ -919,6 +903,8 @@ namespace TRL
     transfer_in.push_back(new_nodal_hydraulic_conductivity);
     transfer_in.push_back(old_nodal_specific_moisture_capacity);
     transfer_in.push_back(new_nodal_specific_moisture_capacity);
+    transfer_in.push_back(old_nodal_free_saturation);
+    transfer_in.push_back(new_nodal_free_saturation);
     
     SolutionTransfer<dim> solution_transfer(dof_handler);
     
@@ -953,6 +939,8 @@ namespace TRL
     new_nodal_hydraulic_conductivity    =transfer_out[14];
     old_nodal_specific_moisture_capacity=transfer_out[15];
     new_nodal_specific_moisture_capacity=transfer_out[16];
+    old_nodal_free_saturation           =transfer_out[17];
+    new_nodal_free_saturation           =transfer_out[18];
 
     //std::cout << "\tOld cell #: " << old_active_cells
     //<< "\tNew cell #: " << triangulation.n_active_cells() << "\n";
@@ -1052,6 +1040,8 @@ namespace TRL
     new_nodal_hydraulic_conductivity.reinit(dof_handler.n_dofs());
     old_nodal_specific_moisture_capacity.reinit(dof_handler.n_dofs());
     new_nodal_specific_moisture_capacity.reinit(dof_handler.n_dofs());
+    old_nodal_free_saturation.reinit(dof_handler.n_dofs());
+    new_nodal_free_saturation.reinit(dof_handler.n_dofs());
   }
 
   template <int dim>
@@ -1094,15 +1084,17 @@ namespace TRL
     Vector<double> old_free_moisture_content_values;
     Vector<double> new_free_moisture_content_values;
     Vector<double> old_hydraulic_conductivity_values;
-    Vector<double> new_hydraulic_conductivity_values;
-    
+    Vector<double> new_hydraulic_conductivity_values;    
     Vector<double> old_moisture_capacity_values;
     Vector<double> new_moisture_capacity_values;
+    Vector<double> cell_old_free_saturation;
+    Vector<double> cell_new_free_saturation;
     
     double face_boundary_indicator;
     nutrient_flow_at_bottom=0.;
     nutrient_flow_at_top=0.;
     nutrients_in_domain_current=0.;
+    biomass_in_domain_current=0.;
     
     typename DoFHandler<dim>::active_cell_iterator
       cell = dof_handler.begin_active(),
@@ -1126,6 +1118,8 @@ namespace TRL
   	new_free_moisture_content_values.reinit(cell->get_fe().dofs_per_cell);
   	old_hydraulic_conductivity_values.reinit(cell->get_fe().dofs_per_cell);
   	new_hydraulic_conductivity_values.reinit(cell->get_fe().dofs_per_cell);
+	cell_old_free_saturation.reinit(cell->get_fe().dofs_per_cell);
+	cell_new_free_saturation.reinit(cell->get_fe().dofs_per_cell);
 	
     	cell->get_dof_values(old_solution_transport,old_substrate_values);
   	cell->get_dof_values(    solution_transport,new_substrate_values);
@@ -1137,6 +1131,8 @@ namespace TRL
   	cell->get_dof_values(new_nodal_free_moisture_content,new_free_moisture_content_values);
   	cell->get_dof_values(old_nodal_hydraulic_conductivity,old_hydraulic_conductivity_values);
   	cell->get_dof_values(new_nodal_hydraulic_conductivity,new_hydraulic_conductivity_values);
+  	cell->get_dof_values(old_nodal_free_saturation,cell_old_free_saturation);
+  	cell->get_dof_values(new_nodal_free_saturation,cell_new_free_saturation);
   	/*
   	 * Calculate local velocities, diffusivities
 	 * The velocities calculated here are Darcy velocities
@@ -1147,8 +1143,6 @@ namespace TRL
 	 * Nutrients calculated in the domain (cell by cell are also
 	 * calculated here.
   	 */
-	// double new_sink_factor=0;
-	// double old_sink_factor=0;
   	Tensor<1,dim> new_velocity;
   	Tensor<1,dim> old_velocity;
   	double dV=0;
@@ -1173,62 +1167,29 @@ namespace TRL
 		       cell->vertex(k)[dim-1])*
 		      fe_values.shape_grad(k,q_point)*
 		      fe_values.JxW(q_point);
+
+		    nutrients_in_domain_current+=//mg_nutrients
+		      fe_values.shape_value(i,q_point)*
+		      new_free_moisture_content_values[k]*
+		      new_substrate_values[k]*
+		      fe_values.shape_value(k,q_point)*
+		      fe_values.JxW(q_point);
+
+		    biomass_in_domain_current+=//mg_biomass
+		      fe_values.shape_value(i,q_point)*
+		      parameters.porosity*
+		      new_biomass_concentration_values[k]*
+		      fe_values.shape_value(k,q_point)*
+		      fe_values.JxW(q_point);
 		  }
   		dV+=//cm3_soil
   		  fe_values.shape_value(k,q_point)*
   		  fe_values.JxW(q_point);
-  		nutrients_in_domain_current+=//mg_nutrients
-  		  new_free_moisture_content_values[k]*
-  		  new_substrate_values[k]*
-  		  fe_values.shape_value(k,q_point)*
-  		  fe_values.JxW(q_point);
-
-		// if (parameters.homogeneous_decay_rate==true)
-		//   {
-		//     new_sink_factor=parameters.first_order_decay_factor;
-		//     old_sink_factor=parameters.first_order_decay_factor;
-		//   }
-		// else if (transient_transport==true && parameters.homogeneous_decay_rate==false)
-		//   {
-		//     /* *
-		//      * Some of the variables for the transport equation defined in the input file
-		//      * are provided in [mg_substrate/L_total_water]. They need to be transformed
-		//      * to [mg_substrate/cm3_total_water] to be consistent with the primary variable
-		//      * in the transport equation and to [mg_biomass/cm3_total_water] in case of the
-		//      * biomass concentration variable defined in the program as
-		//      * [mg_biomass/cm3_total_water]. This is done in this way:
-		//      *
-		//      * half_velocity_constant[mg_substrate/L_total_water]
-		//      * =half_velocity_constant[mg_substrate/L_total_water]*
-		//      * total_water_volume_ratio [L_total_water/1000 cm3_total_water]
-		//      * =(1./1000.)*half_velocity_constant[mg_substrate/cm3_total_water]
-		//      * */
-		//     new_sink_factor+=
-		//       (-1.*parameters.porosity*
-		//        new_biomass_concentration_values[k]*parameters.maximum_substrate_use_rate
-		//        /(new_substrate_values[k]/*+parameters.half_velocity_constant/1000.*/))*
-		//       fe_values.shape_value(k,q_point)*
-		//       fe_values.JxW(q_point);
-		//     old_sink_factor+=
-		//       (-1.*parameters.porosity*
-		//        old_biomass_concentration_values[k]*parameters.maximum_substrate_use_rate
-		//        /(old_substrate_values[k]/*+parameters.half_velocity_constant/1000.*/))*
-		//       fe_values.shape_value(k,q_point)*
-		//       fe_values.JxW(q_point);
-		//   }
 	      }
 	  }
-	// new_sink_factor/=dV;
-	// old_sink_factor/=dV;
 	new_velocity/=dV;
   	old_velocity/=dV;
 	new_velocity_grad/=dV;
-	
-	// if (!numbers::is_finite(new_sink_factor) || !numbers::is_finite(old_sink_factor))
-  	//   {
-	//     new_sink_factor=0;
-	//     old_sink_factor=0;
-  	//   }
 	
   	if (new_velocity.norm()<1.E-5 || stop_flow==true)
   	  {
@@ -1293,42 +1254,42 @@ namespace TRL
 	      {
 		double new_sink_factor=0;
 		double old_sink_factor=0;
-		// if (test_transport==true)
-		//   {
-		//     new_sink_factor=0;
-		//     old_sink_factor=0;
-		//   }
-		// else if (parameters.homogeneous_decay_rate==true)
+		if (test_transport==true)
 		  {
-		    new_sink_factor=parameters.first_order_decay_factor;
+		    new_sink_factor=0;
+		    old_sink_factor=0;
+		  }
+		else if (parameters.homogeneous_decay_rate==true)
+		  {
+		    new_sink_factor=parameters.first_order_decay_factor;//1/s
 		    old_sink_factor=parameters.first_order_decay_factor;
 		  }
-		// else
-		//   {
-		//     /* *
-		//      * Some of the variables for the transport equation defined in the input file
-		//      * are provided in [mg_substrate/L_total_water]. They need to be transformed
-		//      * to [mg_substrate/cm3_total_water] to be consistent with the primary variable
-		//      * in the transport equation and to [mg_biomass/cm3_total_water] in case of the
-		//      * biomass concentration variable defined in the program as
-		//      * [mg_biomass/cm3_total_water]. This is done in this way:
-		//      *
-		//      * half_velocity_constant[mg_substrate/L_total_water]
-		//      * =half_velocity_constant[mg_substrate/L_total_water]*
-		//      * total_water_volume_ratio [L_total_water/1000 cm3_total_water]
-		//      * =(1./1000.)*half_velocity_constant[mg_substrate/cm3_total_water]
-		//      * */
-		    // //if (new_substrate_values[k]>1.E-4)
-		    //   new_sink_factor=
-		    // 	-1.*parameters.porosity*
-		    // 	new_biomass_concentration_values[k]*parameters.maximum_substrate_use_rate
-		    // 	/*(new_substrate_values[k]/*+parameters.half_velocity_constant/1000.)*/;
-		    //   //if (old_substrate_values[k]>1.E-4)
-		    //   old_sink_factor=
-		    // 	-1.*parameters.porosity*
-		    // 	old_biomass_concentration_values[k]*parameters.maximum_substrate_use_rate
-		    // 	/*(old_substrate_values[k]/*+parameters.half_velocity_constant/1000.)*/;
-		//   }
+		else
+		  {
+		    /* *
+		     * Some of the variables for the transport equation defined in the input file
+		     * are provided in [mg_substrate/L_total_water]. They need to be transformed
+		     * to [mg_substrate/cm3_total_water] to be consistent with the primary variable
+		     * in the transport equation and to [mg_biomass/cm3_total_water] in case of the
+		     * biomass concentration variable defined in the program as
+		     * [mg_biomass/cm3_total_water]. This is done in this way:
+		     *
+		     * half_velocity_constant[mg_substrate/L_total_water]
+		     * =half_velocity_constant[mg_substrate/L_total_water]*
+		     * total_water_volume_ratio [L_total_water/1000 cm3_total_water]
+		     * =(1./1000.)*half_velocity_constant[mg_substrate/cm3_total_water]
+		     * */
+		    //if (new_substrate_values[k]>1.E-4)
+		    new_sink_factor=
+		      -1.*parameters.porosity*
+		      new_biomass_concentration_values[k]*parameters.maximum_substrate_use_rate*cell_new_free_saturation[k]/
+		      (cell_new_free_saturation[k]*new_substrate_values[k]+parameters.half_velocity_constant/1000.);
+		    //if (old_substrate_values[k]>1.E-4)
+		    old_sink_factor=
+		      -1.*parameters.porosity*
+		      old_biomass_concentration_values[k]*parameters.maximum_substrate_use_rate*cell_old_free_saturation[k]/
+		      (cell_old_free_saturation[k]*old_substrate_values[k]+parameters.half_velocity_constant/1000.);
+		  }
 		
 		for (unsigned int i=0; i<dofs_per_cell; ++i)
 		  {
@@ -1383,19 +1344,18 @@ namespace TRL
 			  fe_values.shape_value(k,q_point)*
 			  fe_values.JxW(q_point)
 			  /*Reaction term*/
-			  // -
-			  // (
-			  //  fe_values.shape_value(i,q_point)
-			  //  +
-			  //  tau*
-			  //  new_velocity*			   
-			  //  fe_values.shape_grad(i,q_point)
-			  //  )*
-			  // fe_values.shape_value(j,q_point)*
-			  // new_sink_factor*
-			  // fe_values.shape_value(k,q_point)*
-			  // fe_values.JxW(q_point)
-			  ;
+			  -
+			  (
+			   fe_values.shape_value(i,q_point)
+			   +
+			   tau*
+			   new_velocity*			   
+			   fe_values.shape_grad(i,q_point)
+			   )*
+			  fe_values.shape_value(j,q_point)*
+			  new_sink_factor*
+			  fe_values.shape_value(k,q_point)*
+			  fe_values.JxW(q_point);
 
 			cell_laplace_matrix_old(i,j)+=
 			  /*Diffusive term*/
@@ -1419,48 +1379,45 @@ namespace TRL
 			  fe_values.shape_value(k,q_point)*
 			  fe_values.JxW(q_point)
 			  /*Reaction term*/
-			  // -
-			  // (
-			  //  fe_values.shape_value(i,q_point)
-			  //  +
-			  //  tau*
-			  //  old_velocity*			   
-			  //  fe_values.shape_grad(i,q_point)
-			  //  )*
-			  // fe_values.shape_value(j,q_point)*
-			  // old_sink_factor*
-			  // fe_values.shape_value(k,q_point)*
-			  // fe_values.JxW(q_point)
-			  ;
+			  -
+			  (
+			   fe_values.shape_value(i,q_point)
+			   +
+			   tau*
+			   old_velocity*			   
+			   fe_values.shape_grad(i,q_point)
+			   )*
+			  fe_values.shape_value(j,q_point)*
+			  old_sink_factor*
+			  fe_values.shape_value(k,q_point)*
+			  fe_values.JxW(q_point);
 		      }
-		    
-		    cell_rhs(i)+=
-		      (theta_transport)*
-		      time_step*
-		      (
-		       fe_values.shape_value(i,q_point)
-		       +
-		       tau*
-		       old_velocity*			   
-		       fe_values.shape_grad(i,q_point)
-		       )*
-		      old_sink_factor*
-		      fe_values.shape_value(k,q_point)*
-		      fe_values.JxW(q_point)
-		      +
-		      (1.-theta_transport)*
-		      time_step*
-		      (
-		       fe_values.shape_value(i,q_point)
-		       +
-		       tau*
-		       old_velocity*			   
-		       fe_values.shape_grad(i,q_point)
-		       )*
-		      old_sink_factor*
-		      fe_values.shape_value(k,q_point)*
-		      fe_values.JxW(q_point);
-		    
+		    // cell_rhs(i)+=
+		    //   (theta_transport)*
+		    //   time_step*
+		    //   (
+		    //    fe_values.shape_value(i,q_point)
+		    //    +
+		    //    tau*
+		    //    old_velocity*			   
+		    //    fe_values.shape_grad(i,q_point)
+		    //    )*
+		    //   new_sink_factor*
+		    //   fe_values.shape_value(k,q_point)*
+		    //   fe_values.JxW(q_point)
+		    //   +
+		    //   (1.-theta_transport)*
+		    //   time_step*
+		    //   (
+		    //    fe_values.shape_value(i,q_point)
+		    //    +
+		    //    tau*
+		    //    old_velocity*			   
+		    //    fe_values.shape_grad(i,q_point)
+		    //    )*
+		    //   old_sink_factor*
+		    //   fe_values.shape_value(k,q_point)*
+		    //   fe_values.JxW(q_point);
 		  }
 	      }
 	  }
@@ -2209,6 +2166,7 @@ namespace TRL
     data_out.add_data_vector(new_nodal_total_moisture_content,"total_water(cm3_total_water_per_cm3_soil)");
     data_out.add_data_vector(new_nodal_hydraulic_conductivity,"hydraulic_conductivity(cm_per_s)");
     data_out.add_data_vector(new_nodal_specific_moisture_capacity,"specific_moisture_capacity(cm3_total_water_per_(cm3_soil)(cm_total_water))");
+    data_out.add_data_vector(new_nodal_free_saturation,"effective_free_saturation");
     data_out.add_data_vector(boundary_ids,"boundary_ids");
     data_out.build_patches();
 
@@ -2321,6 +2279,7 @@ namespace TRL
   	old_nodal_free_moisture_content=new_nodal_free_moisture_content;
   	old_nodal_hydraulic_conductivity=new_nodal_hydraulic_conductivity;
   	old_nodal_specific_moisture_capacity=new_nodal_specific_moisture_capacity;
+	old_nodal_free_saturation=new_nodal_free_saturation;
       }
     // else if (parameters.initial_state.compare("dry")==0)
     //   {
@@ -2572,7 +2531,9 @@ namespace TRL
     			  << "\tcumulative flow of nutrients at top: " << cumulative_flow_at_top << " mg\n"
     			  << "\tcumulative nutrients in domain: " << nutrients_in_domain_previous << " mg\n"
     			  << "\tmass error: "
-    			  << relative_error_transport << "%\n\n" ;
+    			  << relative_error_transport << "%\n" 
+			  << "\tbiomass in domain: "
+    			  << fabs(biomass_in_domain_current-biomass_in_domain_previous) << " mg\n\n";
     	      }
     	    /* *
     	     * update the iteration
@@ -2589,6 +2550,8 @@ namespace TRL
     	  nutrient_flow_at_bottom*time_step;
     	nutrients_in_domain_previous=
     	  nutrients_in_domain_current;
+	biomass_in_domain_previous=
+    	  biomass_in_domain_current;
     	/* *
     	 * Choose in which time period are we and note the time
     	 * */
@@ -2759,14 +2722,14 @@ namespace TRL
     		    std::cout <<  std::fixed
     			      << "  ts: "    << std::fixed << std::setprecision(2) << std::setw(5)
     			      << time_step
-    			      << "  k_eff: " << std::scientific << std::setprecision(2)
+    			      << "  k_eff: " << std::scientific << std::setprecision(10)
     			      << 1./effective_hydraulic_conductivity
     			      << "\tcell #s: " << std::fixed << std::setprecision(2)
     			      << triangulation.n_active_cells() << "\n"
-    			      << "\tflow of water at bottom    : " << std::setw(7) << std::fixed
+    			      << "\tflow of water at bottom    : " << std::setw(7) << std::scientific
     			      << std::setprecision(4)
     			      << flow_at_bottom << " cm3/s"
-    			      << "\tflow of water at top    : " << std::setw(7) << std::fixed
+    			      << "\tflow of water at top    : " << std::setw(7) << std::scientific
     			      << std::setprecision(4)
     			      << flow_at_top << " cm3/s\n"
     			      << "\tflow of nutrients at bottom: " << std::setw(7) << std::fixed
@@ -2781,6 +2744,8 @@ namespace TRL
     			      << cumulative_flow_at_top << " mg\n"
     			      << "\tcumulative nutrients in domain: " << std::fixed << std::setprecision(3)
     			      << nutrients_in_domain_previous << " mg\n"
+			      << "\tcumulative biomass in domain: " << std::fixed << std::setprecision(3)
+    			      << biomass_in_domain_previous << " mg\n"
     			      << std::endl;
     		  }
     	      }
@@ -2845,12 +2810,14 @@ namespace TRL
     	  new_nodal_free_moisture_content;
     	old_nodal_biomass_concentration=//mg_biomass/m3
     	  new_nodal_biomass_concentration;
+    	old_nodal_biomass_fraction=
+    	  new_nodal_biomass_fraction;
     	old_nodal_hydraulic_conductivity=
     	  new_nodal_hydraulic_conductivity;
     	old_nodal_specific_moisture_capacity=
     	  new_nodal_specific_moisture_capacity;
-    	old_nodal_biomass_fraction=
-    	  new_nodal_biomass_fraction;
+    	old_nodal_free_saturation=
+    	  new_nodal_free_saturation;
     	{
     	  /*
     	   * Based on Paris thesis, p80.
@@ -2867,7 +2834,7 @@ namespace TRL
     	  double intpart=0.;
     	  double fractpart=std::modf((time-milestone_time)/(24.*3600.),&intpart);
     	  stop_flow=true;
-    	  if (transient_transport==true && fractpart>=0. && fractpart<16.*60./(24.*3600.))
+    	  if (transient_transport==true && fractpart>=0. && fractpart<16*60./(24.*3600.))
     	    {
     	      stop_flow=false;
     	    }
