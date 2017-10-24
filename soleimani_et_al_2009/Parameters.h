@@ -16,7 +16,8 @@ namespace Parameters
     double insulation_thickness;
     double insulation_depth;
     unsigned int refinement_level;
-    unsigned int output_frequency_transport;
+    int output_frequency_transport;
+    unsigned int output_frequency_terminal;
 
     double soil_thermal_conductivity;
     double soil_density;
@@ -27,7 +28,7 @@ namespace Parameters
 
     double initial_condition_homogeneous_flow;
     double initial_condition_homogeneous_transport;
-    double initial_condition_homogeneous_bacteria;
+    //double initial_condition_homogeneous_bacteria;
     bool initial_condition_using_files;
     std::string file_with_initial_condition_flow;
     std::string file_with_initial_condition_transport;
@@ -78,6 +79,23 @@ namespace Parameters
     double dispersivity_longitudinal;
     double dispersivity_transverse;
     double effective_diffusion_coefficient;
+
+    double saturated_hydraulic_conductivity_column_1;
+    double saturated_hydraulic_conductivity_column_2;
+    double saturated_hydraulic_conductivity_column_3;
+
+    double moisture_content_saturation_column_1;
+    double moisture_content_saturation_column_2;
+    double moisture_content_saturation_column_3;
+    
+    double porosity_column_1;
+    double porosity_column_2;
+    double porosity_column_3;
+
+    double initial_condition_homogeneous_bacteria_column_1;
+    double initial_condition_homogeneous_bacteria_column_2;
+    double initial_condition_homogeneous_bacteria_column_3;
+    
     std::string relative_permeability_model;
     std::string sand_fraction;
 };
@@ -94,6 +112,7 @@ namespace Parameters
     insulation_depth          =0.;
     refinement_level          =0.;
     output_frequency_transport=0;
+    output_frequency_terminal =0;
 
     soil_thermal_conductivity        =0.;
     soil_density                     =0.;
@@ -104,7 +123,7 @@ namespace Parameters
 
     initial_condition_homogeneous_flow=0.;
     initial_condition_homogeneous_transport=0.;
-    initial_condition_homogeneous_bacteria=0.;
+    //initial_condition_homogeneous_bacteria=0.;
     initial_condition_using_files=false;
 
     richards_fixed_at_bottom=false;
@@ -144,6 +163,10 @@ namespace Parameters
     effective_diffusion_coefficient =0.;
 
     output_data_in_terminal=false;
+
+    initial_condition_homogeneous_bacteria_column_1=0.;
+    initial_condition_homogeneous_bacteria_column_2=0.;
+    initial_condition_homogeneous_bacteria_column_3=0.;
 }
 
   template <int dim>
@@ -229,9 +252,17 @@ namespace Parameters
       prm.declare_entry("initial condition homogeneous transport", "0.0",
 			Patterns::Double(), "homogeneous value for transport "
 			"equation.");
-      prm.declare_entry("initial condition homogeneous bacteria", "0.0",
+      prm.declare_entry("initial condition homogeneous bacteria column 1", "0.0",
 			Patterns::Double(), "homogeneous value for initial bacteria "
 			"concentration in the domain.");
+      prm.declare_entry("initial condition homogeneous bacteria column 2", "0.0",
+			Patterns::Double(), "homogeneous value for initial bacteria "
+			"concentration in the domain.");
+      prm.declare_entry("initial condition homogeneous bacteria column 3", "0.0",
+			Patterns::Double(), "homogeneous value for initial bacteria "
+			"concentration in the domain.");
+		  
+      
       prm.declare_entry("initial condition using files", "false",
 			Patterns::Bool(), "If true use specified files to load "
 			"initial conditions for flow and transport equations and "
@@ -282,7 +313,6 @@ namespace Parameters
 
     }
     prm.leave_subsection();
-
 
     prm.enter_subsection("equations");
     {
@@ -346,6 +376,30 @@ namespace Parameters
       prm.declare_entry("relative permeability model", "soleimani",
 			Patterns::Anything(),"choose the model to calculate the "
 			"relative hydraulic conductivity.");
+
+      prm.declare_entry("saturated hydraulic conductivity column 1","0.00922",
+			Patterns::Double(),"Declare saturated hydraulic "
+			"conductivity in cm/s");
+      prm.declare_entry("saturated hydraulic conductivity column 2","0.00922",
+			Patterns::Double(),"Declare saturated hydraulic "
+			"conductivity in cm/s");
+      prm.declare_entry("saturated hydraulic conductivity column 3","0.00922",
+			Patterns::Double(),"Declare saturated hydraulic "
+			"conductivity in cm/s");
+
+      prm.declare_entry("moisture content saturation column 1","0.368",
+			Patterns::Double()," ");
+      prm.declare_entry("moisture content saturation column 2","0.368",
+			Patterns::Double()," ");
+      prm.declare_entry("moisture content saturation column 3","0.368",
+			Patterns::Double()," ");
+
+      prm.declare_entry("porosity column 1","0.8",
+			Patterns::Double()," ");
+      prm.declare_entry("porosity column 2","0.8",
+			Patterns::Double()," ");
+      prm.declare_entry("porosity column 3","0.8",
+			Patterns::Double()," ");
     }
     prm.leave_subsection();
 
@@ -379,6 +433,10 @@ namespace Parameters
       prm.declare_entry("output frequency transport", "60",
 			Patterns::Integer(),"number that defines the"
 			"number of seconds between outputs");
+      prm.declare_entry("output frequency terminal", "1",
+			Patterns::Integer(),"number that defines the"
+			" how many timesteps between output is printed"
+			" in the terminal");
       prm.declare_entry("output directory", "output",
 			Patterns::Anything(),"name of output "
 			"directory to store all output files.");
@@ -431,8 +489,14 @@ namespace Parameters
     {
       initial_state                          =prm.get("initial state");
       initial_condition_homogeneous_flow     =prm.get_double("initial condition homogeneous flow");
-      initial_condition_homogeneous_transport=prm.get_double("initial condition homogeneous transport");
-      initial_condition_homogeneous_bacteria =prm.get_double("initial condition homogeneous bacteria");
+      initial_condition_homogeneous_transport=
+	prm.get_double("initial condition homogeneous transport");
+      initial_condition_homogeneous_bacteria_column_1=
+	prm.get_double("initial condition homogeneous bacteria column 1");
+      initial_condition_homogeneous_bacteria_column_2=
+	prm.get_double("initial condition homogeneous bacteria column 2");
+      initial_condition_homogeneous_bacteria_column_3=
+	prm.get_double("initial condition homogeneous bacteria column 3");
       initial_condition_using_files        =prm.get_bool("initial condition using files");
       file_with_initial_condition_flow     =prm.get("file with initial condition flow");
       file_with_initial_condition_transport=prm.get("file with initial condition transport");
@@ -484,6 +548,27 @@ namespace Parameters
       dispersivity_transverse         =prm.get_double("dispersivity transverse");
       effective_diffusion_coefficient =prm.get_double("effective diffusion coefficient");
       relative_permeability_model     =prm.get       ("relative permeability model");
+
+      saturated_hydraulic_conductivity_column_1=
+	prm.get_double("saturated hydraulic conductivity column 1");
+      saturated_hydraulic_conductivity_column_2=
+	prm.get_double("saturated hydraulic conductivity column 2");
+      saturated_hydraulic_conductivity_column_3=
+	prm.get_double("saturated hydraulic conductivity column 3");
+
+      moisture_content_saturation_column_1=
+	prm.get_double("moisture content saturation column 1");
+      moisture_content_saturation_column_2=
+	prm.get_double("moisture content saturation column 2");
+      moisture_content_saturation_column_3=
+	prm.get_double("moisture content saturation column 3");
+
+      porosity_column_1=
+	prm.get_double("porosity column 1");
+      porosity_column_2=
+	prm.get_double("porosity column 2");
+      porosity_column_3=
+	prm.get_double("porosity column 3");
     }
     prm.leave_subsection();
 
@@ -508,7 +593,8 @@ namespace Parameters
     {
       output_file_format        =prm.get("output file format");
       output_frequency_transport=prm.get_integer("output frequency transport");
-      output_directory	      =prm.get("output directory");
+      output_frequency_terminal =prm.get_integer("output frequency terminal");
+      output_directory	        =prm.get("output directory");
       output_data_in_terminal   =prm.get_bool("output data in terminal");
     }
     prm.leave_subsection();
