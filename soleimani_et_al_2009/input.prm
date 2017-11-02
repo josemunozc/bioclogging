@@ -1,14 +1,14 @@
 subsection time stepping
-  set timestep number max = 3000 #210000 #110000
+  set timestep number max = 200000 #210000 #110000
   set time step           = 1
   set richards theta scheme value  = 1
   set transport theta scheme value = 0.5
 end
 
 subsection geometric data
-  set use mesh file        = true
+  set use mesh file        = false
   set mesh filename        = joined_columns.msh #
-  set domain size          = 100.  # (cm)
+  set domain size          = 20.  # (cm)
   set refinement level     = 7    #
 end
 
@@ -24,7 +24,7 @@ subsection initial conditions
   set initial state                                   = no_drying # default, dry, saturated, final
   set initial condition homogeneous flow              =    1.0     # cm
   set initial condition homogeneous transport         =    0.0 # mg_substrate/L_total_water
-  set initial condition homogeneous bacteria column 1 =    0.0 #3.85E4 # mg_biomass/L_void_space
+  set initial condition homogeneous bacteria column 1 =  500.0 #3.85E4 # mg_biomass/L_void_space
   set initial condition homogeneous bacteria column 2 =  500.0 #3.85E4 # mg_biomass/L_void_space
   set initial condition homogeneous bacteria column 3 =  500.0 #3.85E4 # mg_biomass/L_void_space
   set initial condition using files                   = false
@@ -35,7 +35,7 @@ end
 
 subsection boundary conditions
   set richards fixed at bottom    = true
-  set richards bottom fixed value = 125.9 # (cm)
+  set richards bottom fixed value = 23.11 #125.9 # (cm)
   set richards bottom flow value  = -0.0075388  #0.0002305555 # (cm/s) !!!!!!!!!!
 	
   set richards fixed at top       = true
@@ -48,12 +48,12 @@ subsection boundary conditions
 end
 
 subsection van genuchten parameters
-  set van genuchten n     = 4 #2  #4
+  set van genuchten n     = 4    #2    #4
   set van genuchten alpha = 0.04 #0.03 #0.04
 end
 
 subsection hydraulic properties
-  set sand fraction                    = 300um #
+  set sand fraction                    = 600um #
   set relative permeability model      = vandevivere #
   set saturated hydraulic conductivity = 3.2E-2 # cm/s
   set moisture content saturation      = 0.408 #
@@ -63,24 +63,24 @@ subsection hydraulic properties
   set dispersivity transverse          = 0.0     #
   set effective diffusion coefficient  = 0.00001 #cm2/s
 
-  set saturated hydraulic conductivity column 1 = 1.2E-2 # cm/s 212um 1.2E-2
+  set saturated hydraulic conductivity column 1 = 7.5E-2 # cm/s 212um 1.2E-2
   set saturated hydraulic conductivity column 2 = 3.2E-2 # cm/s 300um 3.2E-2
   set saturated hydraulic conductivity column 3 = 5.0E-2 # cm/s 425um 5.0E-2
 
-  set moisture content saturation column 1 = 0.41  # 212um 0.41
+  set moisture content saturation column 1 = 0.38 # 212um 0.41
   set moisture content saturation column 2 = 0.408 # 300um 0.408
   set moisture content saturation column 3 = 0.39  # 425um 0.39
   
-  set porosity column 1                    = 0.41  # 212um 0.41
+  set porosity column 1                    = 0.38 # 212um 0.41
   set porosity column 2                    = 0.408 # 300um 0.408
   set porosity column 3                    = 0.39  # 425um 0.39
 end
 
 subsection reaction properties
   set first order decay factor   =   0.0E+0   #1/s
-  set yield coefficient          =   0.759     #0.83 #mg_biomass/mg_substrate 2991/3600
-  set maximum substrate use rate =   1.50E-4  #0.00002 #mg_substrate/mg_biomass*s 2.00E-5
-  set half velocity constant     = 100        #mg_substrate/L_free_water 1.00E+2
+  set yield coefficient          =   0.759    #0.83 #mg_biomass/mg_substrate 2991/3600
+  set maximum substrate use rate =   1.97E-4  #0.00002 #mg_substrate/mg_biomass*s 2.00E-5
+  set half velocity constant     =   1.00E+2        #mg_substrate/L_free_water 1.00E+2
   set decay rate                 =   6.00E-7  #1/s 6.00E-7
   set biomass dry density        =   0.10E+3  #mg_biomass/cm3_biomass 1.00E3 water?
 end
@@ -93,6 +93,6 @@ end
    set output file format         = .vtu # .gp OR .vtu
    set output directory           = output
    set output frequency transport =  60 # (s), set to 0 to stop any output
-   set output frequency terminal  = 1 # (timesteps)
+   set output frequency terminal  = 100 # (timesteps)
    set output data in terminal    = true #
  end

@@ -285,7 +285,7 @@ double Hydraulic_Properties::get_hydraulic_conductivity(double pressure_head,
 	  if (biomass_concentration/biomass_dry_density<1.)//cm3_biomass/cm3_void
 	    {
 	      double plug_hydraulic_conductivity=0.00025;
-	      double critical_biovolume_fraction=.2;//0.1
+	      double critical_biovolume_fraction=0.1;
 	      //double critical_porosity=0.9;
 	      //double relative_porosity=1.-biomass_concentration/biomass_dry_density;
 	      double biovolume_fraction=biomass_concentration/biomass_dry_density;
@@ -343,10 +343,8 @@ class Saturated_Properties
 {
 public:
   Saturated_Properties(Parameters::AllParameters<dim>& parameters_);
-  double hydraulic_conductivity(const Point<dim> &p,
-				const unsigned int material_id=0) const;
-  double moisture_content      (const Point<dim> &p,
-				const unsigned int material_id=0) const;
+  double hydraulic_conductivity(const unsigned int material_id=0) const;
+  double moisture_content      (const unsigned int material_id=0) const;
 private:
   Parameters::AllParameters<dim> parameters;
 };
@@ -358,13 +356,12 @@ Saturated_Properties<dim>::Saturated_Properties(Parameters::AllParameters<dim>& 
 }
 
 template <int dim>
-double Saturated_Properties<dim>::hydraulic_conductivity(const Point<dim>&p,
-							 const unsigned int material_id) const
+double Saturated_Properties<dim>::hydraulic_conductivity(const unsigned int material_id) const
 {
   double hydraulic_conductivity=0.;
   if (dim==1)
     {
-      if (p[0]>=-80.)
+      if (material_id==50)
       	{
       	  hydraulic_conductivity=
       	    parameters.saturated_hydraulic_conductivity_column_1;
@@ -409,13 +406,12 @@ double Saturated_Properties<dim>::hydraulic_conductivity(const Point<dim>&p,
 }
 
 template <int dim>
-double Saturated_Properties<dim>::moisture_content(const Point<dim> &p,
-						   const unsigned int material_id) const
+double Saturated_Properties<dim>::moisture_content(const unsigned int material_id) const
 {
   double moisture_content=0.;
   if (dim==1)
     {
-      if (p[0]>=-80.)
+      if (material_id==50)
       	{
       	  moisture_content=
       	    parameters.moisture_content_saturation_column_1;
@@ -797,13 +793,13 @@ namespace TRL
 	 */
 	for (unsigned int i=0; i<dofs_per_cell; ++i)
 	  {
-	    Point<dim> vertex_point=cell->vertex(i);
+	    //Point<dim> vertex_point=cell->vertex(i);
 	    Hydraulic_Properties
 	      hydraulic_properties(parameters.hydraulic_properties,
-				   saturated_properties.moisture_content(vertex_point,
+				   saturated_properties.moisture_content(/*vertex_point,*/
 									 cell->material_id()),
 				   parameters.moisture_content_residual,
-				   saturated_properties.hydraulic_conductivity(vertex_point,
+				   saturated_properties.hydraulic_conductivity(/*vertex_point,*/
 									       cell->material_id()),
 				   parameters.van_genuchten_alpha,
 				   parameters.van_genuchten_n);
@@ -887,13 +883,13 @@ namespace TRL
 	 */
 	for (unsigned int i=0; i<GeometryInfo<dim>::vertices_per_cell; i++)
 	  {
-	    Point<dim> vertex_point=cell->vertex(i);
+	    //Point<dim> vertex_point=cell->vertex(i);
 	    Hydraulic_Properties
 	      hydraulic_properties(parameters.hydraulic_properties,
-				   saturated_properties.moisture_content(vertex_point,
+				   saturated_properties.moisture_content(/*vertex_point,*/
 									 cell->material_id()),
 				   parameters.moisture_content_residual,
-				   saturated_properties.hydraulic_conductivity(vertex_point,
+				   saturated_properties.hydraulic_conductivity(/*vertex_point,*/
 									       cell->material_id()),
 				   parameters.van_genuchten_alpha,
 				   parameters.van_genuchten_n);
@@ -974,16 +970,16 @@ namespace TRL
 	  {
 	    if (cell->face(face)->at_boundary())
 	      {
-		if (use_mesh_file && cell->face(face)->boundary_id()!=0)
+		if (dim==2 && use_mesh_file && cell->face(face)->boundary_id()!=0)
 		  {//2D
 		    boundary_ids[vector_index]=cell->face(face)->boundary_id();
 		  }
-		else
+		else if (dim==1)
 		  {//1D
 		    if (fabs(cell->face(face)->center()[dim-1]-0.)<1E-4)//top
 		      {
-			cell->face(face)->set_boundary_id(1);
-			boundary_ids[vector_index]=1;
+			cell->face(face)->set_boundary_id(11);
+			boundary_ids[vector_index]=11;
 		      }
 		    else if (fabs(cell->face(face)->center()[dim-1]+parameters.domain_size)<1E-4)//bottom
 		      {
@@ -991,8 +987,18 @@ namespace TRL
 			boundary_ids[vector_index]=2;
 		      }
 		  }
+		else
+		  {
+		    std::cout << "Error in repeated vertices function. Please check dimension and "
+			      << "the use of mesh. Mesh can only be used in 2d.\n";
+		    throw -1;
+		  }
 	      }
 	  }
+	
+	if (dim==1)
+	  cell->set_material_id(50);
+	
 	vector_index++;
       }
   }
@@ -2192,7 +2198,7 @@ namespace TRL
   		fe_face_values.reinit (cell,face);
   		face_boundary_indicator=cell->face(face)->boundary_id();
 		
-  		if ((face_boundary_indicator==1)&&//top
+  		if ((face_boundary_indicator==11)&&//top
   		    (parameters.richards_fixed_at_top==false))//second kind b.c.
   		  {
   		    double flow=0.0;
@@ -2216,7 +2222,7 @@ namespace TRL
   			    fe_face_values.JxW(q_face_point);
   		  }
 		
-		if ((face_boundary_indicator==2)&&//top
+		if ((face_boundary_indicator==2)&&//bottom
   		    (parameters.richards_fixed_at_bottom==false))//second kind b.c.
   		  {
   		    double flow=0.0;
@@ -2349,8 +2355,6 @@ namespace TRL
     std::map<unsigned int,double> boundary_values;
     if (parameters.richards_fixed_at_bottom==true)
       {
-  	double boundary_condition_bottom_fixed_pressure=
-  	  parameters.domain_size+parameters.richards_top_fixed_value;
   	/*
   	 * Based on Paris thesis, p80.
   	 * The peristaltic pump was supposed to apply a constant flow rate
@@ -2362,18 +2366,19 @@ namespace TRL
   	 * 2.5 ml/min. The nutrient feeding rate was set at 16 min per day
   	 * using a timer. This flow rate was selected to provide a total
   	 * flow of 40ml for each sand fraction.
+	 *
+	 * Reference flow: 0.75x10-3 cm3/s (1d)
   	 */
-  	// double intpart=0.;
-  	// double fractpart=std::modf((time-milestone_time)/(24.*3600.),&intpart);
-  	// if (transient_transport==true && fractpart>=0. && fractpart<16.*60./(24.*3600.))
+	double boundary_condition_bottom_fixed_pressure=
+	  parameters.domain_size+parameters.richards_top_fixed_value;
   	if (stop_flow==false)
   	  boundary_condition_bottom_fixed_pressure=
 	    parameters.richards_bottom_fixed_value;
-  	    //parameters.domain_size+parameters.richards_top_fixed_value
-	    
+	
   	VectorTools::interpolate_boundary_values(dof_handler,
   						 2,
-  						 ConstantFunction<dim>(boundary_condition_bottom_fixed_pressure),
+  						 ConstantFunction<dim>
+						 (boundary_condition_bottom_fixed_pressure),
   						 boundary_values);
   	MatrixTools::apply_boundary_values (boundary_values,
   					    system_matrix_flow,
@@ -2757,9 +2762,7 @@ namespace TRL
 	  {
 	    if (dim==1)
 	      {
-		Point<dim> vertex_point=cell->vertex(i);
-		double x=vertex_point[0];
-		if (x>=-80.)
+		if (cell->material_id()==50)
 		  {
 		    initial_biomass_values[i]=
 		      (1./1000.)*parameters
@@ -2790,44 +2793,6 @@ namespace TRL
 		initial_biomass_fraction[i]=
 		  (1./1000.)*biomass
 		  /parameters.biomass_dry_density;
-		
-		// Point<dim> vertex_point=cell->vertex(i);
-		// double x=vertex_point[0];
-		// double y=vertex_point[1];
-		
-		// 	if (y>=-80.)
-		// 	  {
-		// 	    if (x<=-66.66)//left - 212um
-		// 	      {
-		// 		initial_biomass_values[i]=
-		// 		  (1./1000.)*parameters
-		// 		  .initial_condition_homogeneous_bacteria;
-		// 		initial_biomass_fraction[i]=
-		// 		  (1./1000.)*parameters
-		// 		  .initial_condition_homogeneous_bacteria
-		// 		  /parameters.biomass_dry_density;
-		// 	      }
-		// 	    else if (x>=-33.32)//right - 425um
-		// 	      {
-		// 		initial_biomass_values[i]=
-		// 		  (1./1000.)*parameters
-		// 		  .initial_condition_homogeneous_bacteria;
-		// 		initial_biomass_fraction[i]=
-		// 		  (1./1000.)*parameters
-		// 		  .initial_condition_homogeneous_bacteria
-		// 		  /parameters.biomass_dry_density;
-		// 	      }
-		// 	    else//central - 300um
-		// 	      {
-		// 		initial_biomass_values[i]=
-		// 		  (1./1000.)*parameters
-		// 		  .initial_condition_homogeneous_bacteria;
-		// 		initial_biomass_fraction[i]=
-		// 		  (1./1000.)*parameters
-		// 		  .initial_condition_homogeneous_bacteria
-		// 		  /parameters.biomass_dry_density;
-		// 	      }
-		// 	  }
 	      }
 	    else
 	      {
@@ -2876,9 +2841,12 @@ namespace TRL
   {
     read_grid();
     setup_system();
-    refine_grid(1);
-    refine_grid(4);
-    refine_grid(4);
+    if (dim==2)
+      {
+	refine_grid(1);
+	refine_grid(4);
+	refine_grid(4);
+      }
     repeated_vertices();
     initial_condition();
     
@@ -2980,12 +2948,12 @@ namespace TRL
     		  remain_in_loop=false;
     	      }
 	    
-    	    if (step>10)
-	      {
-		print_info(iteration,
-			   relative_error_flow,
-			   relative_error_transport);
-	      }
+    	    // if (step>10)
+	    //   {
+	    // 	print_info(iteration,
+	    // 		   relative_error_flow,
+	    // 		   relative_error_transport);
+	    //   }
 	    
     	    iteration++;
     	    step++;
@@ -3138,10 +3106,13 @@ namespace TRL
 		    .push_back(1./effective_hydraulic_conductivity);
 		  average_hydraulic_conductivity_vector_row
 		    .push_back(flow_column_1);
-		  average_hydraulic_conductivity_vector_row
-		    .push_back(flow_column_2);
-		  average_hydraulic_conductivity_vector_row
-		    .push_back(flow_column_3);
+		  if (dim==2)
+		    {
+		      average_hydraulic_conductivity_vector_row
+			.push_back(flow_column_2);
+		      average_hydraulic_conductivity_vector_row
+			.push_back(flow_column_3);
+		    }
 		  average_hydraulic_conductivity_vector_row
 		    .push_back(flow_at_bottom);
 		  average_hydraulic_conductivity_vector_row
@@ -3160,17 +3131,19 @@ namespace TRL
 		    .push_back(biomass_in_domain_previous);
 		  average_hydraulic_conductivity_vector_row
 		    .push_back(biomass_column_1);
-		  average_hydraulic_conductivity_vector_row
-		    .push_back(biomass_column_2);
-		  average_hydraulic_conductivity_vector_row
-		    .push_back(biomass_column_3);
-			       
+		  if (dim==2)
+		    {
+		      average_hydraulic_conductivity_vector_row
+			.push_back(biomass_column_2);
+		      average_hydraulic_conductivity_vector_row
+			.push_back(biomass_column_3);
+		    }
 		  average_hydraulic_conductivity_vector.clear();
     		  average_hydraulic_conductivity_vector
 		    .push_back(average_hydraulic_conductivity_vector_row);
 		  
 		  std::stringstream filename;
-		  filename << "average_hydraulic_conductivity_sf_"
+		  filename << "output_data_" << dim << "d_"
 			   << parameters.relative_permeability_model << "_"
 			   << parameters.sand_fraction << "_"
 			   << parameters.yield_coefficient << "_"
@@ -3178,23 +3151,33 @@ namespace TRL
 			   << parameters.half_velocity_constant << ".txt";
 		  
 		  std::ofstream output_file;
-		  if (timestep_number==1)
+		  if (timestep_number==parameters.output_frequency_terminal)
 		    {
 		      output_file.open(filename.str(),std::ios_base::out);
 		      output_file << "n\t"
 				  << "time (h)\t"
 				  << "k_e (cm/s)\t"
-				  << "flow_1 (cm3/s)\t"
-				  << "flow_2 (cm3/s)\t"
-				  << "flow_3 (cm3/s)\t"
-				  << "flow_bottom (cm3/s)\t"
+				  << "flow_1 (cm3/s)\t";
+		      if (dim==2)
+			{ 
+			  output_file << "flow_2 (cm3/s)\t"
+				      << "flow_3 (cm3/s)\t";
+			}
+		      output_file << "flow_bottom (cm3/s)\t"
 				  << "flow_top (cm3/s)\t"
 				  << "nutrients_bottom (mg/s)\t"
 				  << "nutrients_top (mg/s)\t"
 				  << "cumulative flow nutrients at bottom (mg/s)\t"
 				  << "cumulative flow nutrients at top (mg/s)\t"
 				  << "cumulative nutrients in domain (mg)\t"
-				  << "cumulative biomass in domain (mg)\n";
+				  << "cumulative biomass in domain (mg)\t"
+				  << "biomass_1 (mg)";
+		      if (dim==2)
+			{ 
+			  output_file << "\tbiomass_2 (mg)"
+				      << "\tbiomass_3 (mg)";
+			}
+		      output_file << "\n";
 		    }
 		  else
 		    output_file.open(filename.str(),std::ios_base::app);
@@ -3347,16 +3330,18 @@ namespace TRL
     	   * using a timer. This flow rate was selected to provide a total
     	   * flow of 40ml for each sand fraction.
     	   */
-    	  // double intpart=0.;
-    	  // double fractpart=std::modf((time-milestone_time)/(24.*3600.),&intpart);
 	  stop_flow=true;
-	  if (transient_transport==true/* && fractpart>=0. && fractpart<16*60./(24.*3600.)*/)
+	  double intpart=0.;
+	  double fractpart=std::modf((time-milestone_time)/(24.*3600.),&intpart);
+	  if (transient_transport==true &&
+	      ((dim==1 && fractpart>=0. && fractpart<16*60./(24.*3600.)) ||
+	       (dim==2)))
 	    {
 	      stop_flow=false;
 	    }
-    	}
+	}
       }
-
+    
     output_results();
     std::cout << "\t Job Done!!"
 	      << std::endl;
@@ -3374,7 +3359,8 @@ int main (int argc, char *argv[])
 	
 	t1=clock();
 	deallog.depth_console (0);
-	Heat_Pipe<2> laplace_problem(argc,argv);
+	const unsigned int dim=1;;
+	Heat_Pipe<dim> laplace_problem(argc,argv);
 	laplace_problem.run();
 	t2=clock();
 
