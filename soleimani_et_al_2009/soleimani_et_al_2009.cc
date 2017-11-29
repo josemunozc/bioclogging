@@ -590,7 +590,7 @@ namespace TRL
     fe(1)
   {
     std::cout << "Program run with the following arguments:\n";
-    if (argc!=2)
+    if (argc!=3)
       {
 	for (int i=0; i<argc; i++)
 	  std::cout << "arg " << i << " : " << argv[i] << "\n";
@@ -601,7 +601,8 @@ namespace TRL
     else
       {
 	std::cout << "Program name        : " << argv[0] << "\n";
-	std::cout << "Input parameter file: " << argv[1] << "\n\n";
+	std::cout << "Input parameter file: " << argv[1] << "\n";
+	std::cout << "Dimensions          : " << argv[2] << "\n\n";
       }
 
     parameters_filename = argv[1];
@@ -987,12 +988,12 @@ namespace TRL
 			boundary_ids[vector_index]=2;
 		      }
 		  }
-		else
-		  {
-		    std::cout << "Error in repeated vertices function. Please check dimension and "
-			      << "the use of mesh. Mesh can only be used in 2d.\n";
-		    throw -1;
-		  }
+		// else
+		//   {
+		//     std::cout << "Error in repeated vertices function. Please check dimension and "
+		// 	      << "the use of mesh. Mesh can only be used in 2d.\n";
+		//     throw -1;
+		//   }
 	      }
 	  }
 	
@@ -1444,50 +1445,78 @@ namespace TRL
   	Tensor<1,dim> old_velocity;
 	double total_moisture=0.;
   	double dV=0;
-	
-  	for (unsigned int q_point=0; q_point<n_q_points; ++q_point)
-  	  {
-  	    for (unsigned int k=0; k<dofs_per_cell; ++k)
-  	      {
-		for (unsigned int i=0; i<dofs_per_cell; ++i)
+	if (test_transport==false)
+	  {
+	    for (unsigned int q_point=0; q_point<n_q_points; ++q_point)
+	      {
+		for (unsigned int k=0; k<dofs_per_cell; ++k)
 		  {
-		    new_velocity-=//Darcy velocity - cm/s
-		      new_hydraulic_conductivity_values[i]*
-		      fe_values.shape_value(i,q_point)*
-		      (new_pressure_values(k)+
-		       cell->vertex(k)[dim-1])*
-		      fe_values.shape_grad(k,q_point)*
-		      fe_values.JxW(q_point);
+		    for (unsigned int i=0; i<dofs_per_cell; ++i)
+		      {
+			new_velocity-=//Darcy velocity - cm/s
+			  new_hydraulic_conductivity_values[i]*
+			  fe_values.shape_value(i,q_point)*
+			  (new_pressure_values(k)+
+			   cell->vertex(k)[dim-1])*
+			  fe_values.shape_grad(k,q_point)*
+			  fe_values.JxW(q_point);
 
-		    old_velocity-=//Darcy velocity - cm/s
-		      old_hydraulic_conductivity_values[i]*
-		      fe_values.shape_value(i,q_point)*
-		      (old_pressure_values(k)+
-		       cell->vertex(k)[dim-1])*
-		      fe_values.shape_grad(k,q_point)*
-		      fe_values.JxW(q_point);
+			old_velocity-=//Darcy velocity - cm/s
+			  old_hydraulic_conductivity_values[i]*
+			  fe_values.shape_value(i,q_point)*
+			  (old_pressure_values(k)+
+			   cell->vertex(k)[dim-1])*
+			  fe_values.shape_grad(k,q_point)*
+			  fe_values.JxW(q_point);
 
-		    nutrients_in_domain_current+=//mg_nutrients
-		      fe_values.shape_value(i,q_point)*
-		      new_free_moisture_content_values[k]*
-		      new_substrate_values[k]*
-		      fe_values.shape_value(k,q_point)*
-		      fe_values.JxW(q_point);
+			nutrients_in_domain_current+=//mg_nutrients
+			  fe_values.shape_value(i,q_point)*
+			  new_free_moisture_content_values[k]*
+			  new_substrate_values[k]*
+			  fe_values.shape_value(k,q_point)*
+			  fe_values.JxW(q_point);
 		    
-		    total_moisture+=
-		      fe_values.shape_value(i,q_point)*
-		      cell_new_total_moisture_content[k]*
+			total_moisture+=
+			  fe_values.shape_value(i,q_point)*
+			  cell_new_total_moisture_content[k]*
+			  fe_values.shape_value(k,q_point)*
+			  fe_values.JxW(q_point);
+		      }
+		    dV+=//cm3_soil
 		      fe_values.shape_value(k,q_point)*
 		      fe_values.JxW(q_point);
 		  }
-  		dV+=//cm3_soil
-  		  fe_values.shape_value(k,q_point)*
-  		  fe_values.JxW(q_point);
+	      }
+	    new_velocity/=dV;
+	    old_velocity/=dV;
+	    total_moisture/=dV;
+	  }
+	else if (test_transport==true && dim==1)
+	  {
+	    if (parameters.transport_mass_entry_point=="bottom")
+	      {
+		new_velocity[dim-1]=parameters.richards_bottom_flow_value;
+		old_velocity[dim-1]=parameters.richards_bottom_flow_value;
+	      }
+	    else if (parameters.transport_mass_entry_point=="top")
+	      {
+		new_velocity[dim-1]=parameters.richards_top_flow_value;
+		old_velocity[dim-1]=parameters.richards_top_flow_value;
+	      }
+	    else
+	      {
+		std::cout << "Error. Case not implemented in transport assemble function.\n"
+			  << "Error assigning velocity field.";
+		  throw -1;
 	      }
 	  }
-	new_velocity/=dV;
-  	old_velocity/=dV;
-	total_moisture/=dV;
+	else
+	  {
+	    std::cout << "Error. Case not implemented in transport assemble function.\n"
+		      << "Error in combination of test_transport and dimension.";
+	      throw -1;
+	  }
+	
 	double porosity=total_moisture;
 	double biomass_in_current_cell=0.;
 	for (unsigned int q_point=0; q_point<n_q_points; ++q_point)
@@ -1528,12 +1557,14 @@ namespace TRL
   	  }
   	if (numbers::is_nan(new_velocity.norm()) || numbers::is_nan(old_velocity.norm()))
   	  {
-  	    std::cout << "error in velocities calulation\n";
+  	    std::cout << "NaN error in velocities calulation.\n";
+	    std::cout << new_velocity[dim-1] << "\t" << old_velocity[dim-1] << "\n";
   	    throw -1;
   	  }
   	if (!numbers::is_finite(new_velocity.norm()) || !numbers::is_finite(old_velocity.norm()))
   	  {
-  	    std::cout << "error in velocities calulation\n";
+  	    std::cout << "Infinite error in velocities calulation\n";
+	    std::cout << new_velocity[dim-1] << "\t" << old_velocity[dim-1] << "\n";
   	    throw -1;
   	  }
 
@@ -1617,17 +1648,12 @@ namespace TRL
 	      {
 		double new_sink_factor=0;
 		double old_sink_factor=0;
-		if (test_transport==true)
-		  {
-		    new_sink_factor=0;
-		    old_sink_factor=0;
-		  }
-		else if (parameters.homogeneous_decay_rate==true)
+		if (parameters.homogeneous_decay_rate==true)
 		  {
 		    new_sink_factor=parameters.first_order_decay_factor;//1/s
 		    old_sink_factor=parameters.first_order_decay_factor;
 		  }
-		else
+		else if (test_transport==false)
 		  {
 		    /* *
 		     * Some of the variables for the transport equation defined in the input file
@@ -1956,13 +1982,6 @@ namespace TRL
   	    system_rhs_transport(local_dof_indices[i])+=cell_rhs(i);
   	  }
       }
-    // std::cout << std::fixed << std::setprecision(5)
-    // 	      << "\ttime step: " << time_step << " s\n"
-    // 	      << "\tflow of nutrients at bottom: " << nutrient_flow_at_bottom << " mg/s\t"
-    // 	      << "\tflow of nutrients at top: "    << nutrient_flow_at_top << " mg/s\n"
-    // 	      << "\tnutrients in domain: "         << nutrients_in_domain_current << " mg\n"
-    // 	      << "\tcumulative flow of nutrients at bottom: " << cumulative_flow_at_bottom << " mg\t"
-    // 	      << "\tcumulative flow of nutrients at top: " << cumulative_flow_at_top << " mg\n";
     Vector<double> tmp(solution_transport.size ());
     
     mass_matrix_transport_old.vmult   ( tmp,old_solution_transport);
@@ -2519,7 +2538,7 @@ namespace TRL
       }
     else
       {
-  	filename = "solution_"
+  	filename = parameters.output_directory + "/solution_"
   	  + d.str() + "d_"
   	  + "tsn_" + tsn.str()
   	  + output_file_format;
@@ -2828,7 +2847,7 @@ namespace TRL
 	      << "\tcumulative flow of nutrients at top   : " << cumulative_flow_at_top << " mg\n"
 	      << "\tcumulative nutrients in domain        : " << nutrients_in_domain_previous << " mg\n"
 	      << "\trelative error transport: "
-	      << rel_err_tran << "%\n"
+	      << std::scientific << rel_err_tran << "%\n"
       	      << "\trelative error flow: "
 	      << rel_err_flow << "%\n" 
 	      << "\tbiomass in domain: "
@@ -2868,12 +2887,6 @@ namespace TRL
     	 timestep_number<parameters.timestep_number_max;
     	 ++timestep_number)
       {
-	// if (transient_transport==true)
-	//   {
-	//     if (timestep_number>=5)
-	//       refine_grid(2);
-	//   }
-	
     	double relative_error_flow=1000;
     	double relative_error_transport=0;
     	double old_norm_flow=0.;
@@ -2897,9 +2910,13 @@ namespace TRL
     	     * */
     	    calculate_mass_balance_ratio();
     	    if (solve_flow && test_transport==false)
-    	      assemble_system_flow();
+	      {
+		assemble_system_flow();
+	      }
     	    if ((transient_transport==true || test_transport==true) && coupled_transport==true)
-    	      assemble_system_transport();
+	      {
+		assemble_system_transport();
+	      }
     	    /* *
     	     * SOLVE systems
     	     * */
@@ -2944,18 +2961,17 @@ namespace TRL
     	      }
     	    else
     	      {
-    		if (relative_error_transport<1.5E-7)
+    		if (relative_error_transport<1E-5)
     		  remain_in_loop=false;
     	      }
 	    
-    	    // if (step>10)
-	    //   {
-	    // 	print_info(iteration,
-	    // 		   relative_error_flow,
-	    // 		   relative_error_transport);
-	    //   }
-	    
-    	    iteration++;
+    	    if (step>10)
+	      {
+	    	print_info(iteration,
+	    		   relative_error_flow,
+	    		   relative_error_transport);
+	      }
+	    iteration++;
     	    step++;
 	  }
     	while (remain_in_loop);
@@ -3074,11 +3090,11 @@ namespace TRL
     	    /* *
     	     * Output info in the terminal
     	     * */
-    	    if ((test_transport==false) && ((timestep_number%1==0 && transient_drying==true) ||
-    					    (timestep_number%1==0 && transient_saturation==true) ||
-    					    (timestep_number%parameters.output_frequency_terminal==0
-					     && transient_transport==true) ||
-    					    (timestep_number==parameters.timestep_number_max-1)))
+    	    if ((timestep_number%1==0 && transient_drying==true) ||
+		(timestep_number%1==0 && transient_saturation==true) ||
+		(timestep_number%parameters.output_frequency_terminal==0
+		 && transient_transport==true) ||
+		(timestep_number==parameters.timestep_number_max-1))
     	      {
     		double effective_hydraulic_conductivity=0.;
     		{
@@ -3248,7 +3264,8 @@ namespace TRL
     	  }
     	else
     	  {
-    	    std::cout << "Time step " << timestep_number << "\tts: " << time_step << "\n";
+	    if (timestep_number%parameters.output_frequency_terminal==0)
+	      std::cout << "Time step " << timestep_number << "\tts: " << time_step << "\n";
     	  }
     	/* *
     	 * OUTPUT solution files
@@ -3256,19 +3273,27 @@ namespace TRL
     	double output_frequency_drying=1;
     	double output_frequency_saturation=1;
     	double output_frequency_transport=parameters.output_frequency_transport;
-    	if ((transient_drying==true && time-milestone_time>=figure_count*output_frequency_drying) ||
-    	    (transient_saturation==true && time-milestone_time>=figure_count*output_frequency_saturation) ||
-    	    (transient_transport==true && output_frequency_transport>0 &&
-    	     time-milestone_time>=figure_count*output_frequency_transport) ||
-	    (transient_transport==true && output_frequency_transport<0) ||
-    	    (timestep_number==parameters.timestep_number_max-1))
-    	  {
-    	    output_results();
+    	if (test_transport==false &&
+	    (
+	     (time-milestone_time>=figure_count*output_frequency_drying &&
+	      transient_drying==true) ||
+	     (time-milestone_time>=figure_count*output_frequency_saturation &&
+	      transient_saturation==true) ||
+	     (time-milestone_time>=figure_count*output_frequency_transport &&
+	      transient_transport==true && output_frequency_transport>0) ||
+	     (transient_transport==true && output_frequency_transport<0) ||
+	     (timestep_number==parameters.timestep_number_max-1))
+	    ||
+	    (time-milestone_time>=figure_count*output_frequency_transport &&
+	     test_transport==true)
+	    )
+	  {
+	    output_results();
     	    figure_count++;
     	  }
     	/* *
     	 * Update timestep
-    	 * */	
+    	 * */
     	if (test_transport==false)
     	  {
     	    if (redefine_time_step==true)
@@ -3286,7 +3311,7 @@ namespace TRL
 	    
     	    if (time_step<1)
     	      time_step=1;
-
+	    
     	    if (time_step>1 && transient_drying==true)
     	      time_step=1;
     	    else if (time_step>1 && transient_saturation==true)
@@ -3330,15 +3355,21 @@ namespace TRL
     	   * using a timer. This flow rate was selected to provide a total
     	   * flow of 40ml for each sand fraction.
     	   */
-	  stop_flow=true;
-	  double intpart=0.;
-	  double fractpart=std::modf((time-milestone_time)/(24.*3600.),&intpart);
-	  if (transient_transport==true &&
-	      ((dim==1 && fractpart>=0. && fractpart<16*60./(24.*3600.)) ||
-	       (dim==2)))
+	  if (dim==2)
+	    stop_flow=false;
+	  else if (dim==1)
 	    {
-	      stop_flow=false;
+	      stop_flow=true;
+	      double intpart=0.;
+	      double fractpart=std::modf((time-milestone_time)/(24.*3600.),&intpart);
+	      if (transient_transport==true &&
+		  ((dim==1 && fractpart>=0. && fractpart<16*60./(24.*3600.)) ||
+		   (dim==2)))
+		{
+		  stop_flow=false;
+		}
 	    }
+	  
 	}
       }
     
@@ -3359,7 +3390,7 @@ int main (int argc, char *argv[])
 	
 	t1=clock();
 	deallog.depth_console (0);
-	const unsigned int dim=1;;
+	const unsigned int dim=2;
 	Heat_Pipe<dim> laplace_problem(argc,argv);
 	laplace_problem.run();
 	t2=clock();

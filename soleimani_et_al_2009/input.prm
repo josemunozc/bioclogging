@@ -1,15 +1,15 @@
 subsection time stepping
-  set timestep number max = 200000 #210000 #110000
+  set timestep number max = 4000 #210000 #110000
   set time step           = 1
   set richards theta scheme value  = 1
   set transport theta scheme value = 0.5
 end
 
 subsection geometric data
-  set use mesh file        = false
+  set use mesh file        = true
   set mesh filename        = joined_columns.msh #
-  set domain size          = 20.  # (cm)
-  set refinement level     = 7    #
+  set domain size          = 100. # (cm)
+  set refinement level     = 7     #
 end
 
 subsection equations
@@ -24,27 +24,24 @@ subsection initial conditions
   set initial state                                   = no_drying # default, dry, saturated, final
   set initial condition homogeneous flow              =    1.0     # cm
   set initial condition homogeneous transport         =    0.0 # mg_substrate/L_total_water
-  set initial condition homogeneous bacteria column 1 =  500.0 #3.85E4 # mg_biomass/L_void_space
-  set initial condition homogeneous bacteria column 2 =  500.0 #3.85E4 # mg_biomass/L_void_space
-  set initial condition homogeneous bacteria column 3 =  500.0 #3.85E4 # mg_biomass/L_void_space
+  set initial condition homogeneous bacteria column 1 = 900.0 # mg_biomass/L_void_space
+  set initial condition homogeneous bacteria column 2 = 0.0 # mg_biomass/L_void_space
+  set initial condition homogeneous bacteria column 3 = 0.0 # mg_biomass/L_void_space
   set initial condition using files                   = false
-  set file with initial condition flow                = final_state_flow.ph 
-  set file with initial condition transport           = final_state_transport.ph
-  set file with initial condition bacteria            = final_state_bacteria.ph
 end
 
 subsection boundary conditions
-  set richards fixed at bottom    = true
-  set richards bottom fixed value = 23.11 #125.9 # (cm)
-  set richards bottom flow value  = -0.0075388  #0.0002305555 # (cm/s) !!!!!!!!!!
+  set richards fixed at bottom    = false #
+  set richards bottom fixed value = 141.85 # (cm)
+  set richards bottom flow value  = -0.00783 # (cm/s)
 	
   set richards fixed at top       = true
   set richards top fixed value    =   1.0          # (cm)
-  set richards top flow value     =   0.0002305555 # (cm/s) 20cm/day
+  set richards top flow value     =   0.0002305555 # (cm/s)
 	
   set transport mass entry point = bottom
   set transport fixed at top     = false
-  set transport top fixed value  = 30000. # (mg_substrate/L_free_water) 30g/l
+  set transport top fixed value  = 30000 #(mg_substrate/L_free_water) [ppm]
 end
 
 subsection van genuchten parameters
@@ -53,36 +50,33 @@ subsection van genuchten parameters
 end
 
 subsection hydraulic properties
-  set sand fraction                    = 600um #
+  set sand fraction                    = 300um #
   set relative permeability model      = vandevivere #
-  set saturated hydraulic conductivity = 3.2E-2 # cm/s
-  set moisture content saturation      = 0.408 #
-  set porosity                         = 0.408 #
   set moisture content residual        = 0.04  #
   set dispersivity longitudinal        = 1.0     #
   set dispersivity transverse          = 0.0     #
   set effective diffusion coefficient  = 0.00001 #cm2/s
 
-  set saturated hydraulic conductivity column 1 = 7.5E-2 # cm/s 212um 1.2E-2
-  set saturated hydraulic conductivity column 2 = 3.2E-2 # cm/s 300um 3.2E-2
-  set saturated hydraulic conductivity column 3 = 5.0E-2 # cm/s 425um 5.0E-2
+  set saturated hydraulic conductivity column 1 = 0.05  # [cm/s]
+  set moisture content saturation column 1      = 0.39  # 
+  set porosity column 1                         = 0.39  #
 
-  set moisture content saturation column 1 = 0.38 # 212um 0.41
-  set moisture content saturation column 2 = 0.408 # 300um 0.408
-  set moisture content saturation column 3 = 0.39  # 425um 0.39
-  
-  set porosity column 1                    = 0.38 # 212um 0.41
-  set porosity column 2                    = 0.408 # 300um 0.408
-  set porosity column 3                    = 0.39  # 425um 0.39
+  set saturated hydraulic conductivity column 2 = 0.032 # [cm/s]
+  set moisture content saturation column 2      = 0.408 # 
+  set porosity column 2                         = 0.408 #
+
+  set saturated hydraulic conductivity column 3 = 0.012 # [cm/s]
+  set moisture content saturation column 3      = 0.410 # 
+  set porosity column 3                         = 0.410 #
 end
 
 subsection reaction properties
-  set first order decay factor   =   0.0E+0   #1/s
-  set yield coefficient          =   0.759    #0.83 #mg_biomass/mg_substrate 2991/3600
-  set maximum substrate use rate =   1.97E-4  #0.00002 #mg_substrate/mg_biomass*s 2.00E-5
-  set half velocity constant     =   1.00E+2        #mg_substrate/L_free_water 1.00E+2
+  set first order decay factor   =   -1.6E-7   #1/s
+  set yield coefficient          =   0.098    #0.83 #mg_biomass/mg_substrate 2991/3600     0.098    0.21
+  set maximum substrate use rate =   4.08E-4  #0.00002 #mg_substrate/mg_biomass*s 2.00E-5  4.08E-4  3.33E-4 
+  set half velocity constant     =   4.00E+3  #mg_substrate/L_free_water 1.00E+2           4E3      5E3
   set decay rate                 =   6.00E-7  #1/s 6.00E-7
-  set biomass dry density        =   0.10E+3  #mg_biomass/cm3_biomass 1.00E3 water?
+  set biomass dry density        =   0.30E+2  #mg_biomass/cm3_biomass 1.00E3 water?
 end
  
  subsection test functions
@@ -92,7 +86,7 @@ end
  subsection general things
    set output file format         = .vtu # .gp OR .vtu
    set output directory           = output
-   set output frequency transport =  60 # (s), set to 0 to stop any output
-   set output frequency terminal  = 100 # (timesteps)
+   set output frequency transport =  900 # (s), set to 0 to stop any output
+   set output frequency terminal  = 10  # (timesteps)
    set output data in terminal    = true #
  end
